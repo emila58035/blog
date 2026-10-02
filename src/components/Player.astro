@@ -23,6 +23,19 @@ import { href } from '../utils/url';
 >
   <audio data-player-audio preload="metadata"></audio>
 
+  <div class="player-volume-pop" data-player-volume-pop hidden>
+    <input
+      class="player-volume-range"
+      type="range"
+      min="0"
+      max="1"
+      step="0.01"
+      value="1"
+      data-player-volume-range
+      aria-label="音量大小"
+    />
+  </div>
+
   <button class="player-btn" type="button" data-player-toggle aria-label="播放或暂停">
     <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M8 5.14v13.72L19 12z" fill="currentColor"></path>
@@ -44,6 +57,19 @@ import { href } from '../utils/url';
 
   <div class="player-right">
     <span class="player-time" data-player-time>0:00</span>
+    <div class="player-volume">
+      <button class="player-btn player-btn-sm" type="button" data-player-volume aria-label="音量" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M4 9v6h3.2L12 19V5L7.2 9H4zm11.5-1.4a6 6 0 0 1 0 8.8"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"></path>
+        </svg>
+      </button>
+    </div>
     <button class="player-btn player-btn-sm" type="button" data-player-prev aria-label="上一首">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M7 6h2v12H7zM19 6v12l-9-6z" fill="currentColor"></path>
@@ -77,6 +103,7 @@ import { href } from '../utils/url';
       index: number;
       time: number;
       playing: boolean;
+      volume?: number;
     }
 
     const readState = (): SavedState => {
@@ -89,13 +116,14 @@ import { href } from '../utils/url';
               index: parsed.index,
               time: typeof parsed.time === 'number' ? parsed.time : 0,
               playing: parsed.playing === true,
+              volume: typeof parsed.volume === 'number' ? parsed.volume : 1,
             };
           }
         }
       } catch {
         /* 读不到就用默认值 */
       }
-      return { index: 0, time: 0, playing: false };
+      return { index: 0, time: 0, playing: false, volume: 1 };
     };
 
     const writeState = () => {
@@ -106,6 +134,7 @@ import { href } from '../utils/url';
             index: state.index,
             time: audio.currentTime,
             playing: !audio.paused,
+            volume: audio.volume,
           })
         );
       } catch {
@@ -201,6 +230,38 @@ import { href } from '../utils/url';
      * 既避开自动播放策略，也避免"只是刷新页面就突然开始放歌"。
      */
     const restore = (index: number, time: number, autoplay: boolean) => load(index, time, autoplay);
+
+    // ---- 音量 ----
+    // 范围输入是 dock 的子元素：切页时随 dock 一起被原子搬运，原生监听器不会丢。
+    const volumeBtn = dock.querySelector<HTMLButtonElement>('[data-player-volume]')!;
+    const volumePop = dock.querySelector<HTMLElement>('[data-player-volume-pop]')!;
+    const volumeRange = dock.querySelector<HTMLInputElement>('[data-player-volume-range]')!;
+
+    // 音量只有这一份真相：改范围输入就等于改音频音量，顺带写回 localStorage。
+    // 用属性描述符而不是在 play() 里补一句，是为了让任何赋值路径都不会漏掉。
+    let volume = Math.min(Math.max(state.volume ?? 1, 0), 1);
+    Object.defineProperty(audio, 'volume', {
+      configurable: true,
+      get: () => volume,
+      set: (next: number) => {
+        volume = Math.min(Math.max(next, 0), 1);
+        state.volume = volume;
+        writeState();
+      },
+    });
+    volumeRange.value = String(volume);
+
+    const setVolume = (next: number) => {
+      audio.volume = next;
+      volumeRange.value = String(volume);
+    };
+
+    volumeBtn.addEventListener('click', () => {
+      const open = volumePop.hidden;
+      volumePop.hidden = !open;
+      volumeBtn.setAttribute('aria-expanded', String(open));
+    });
+    volumeRange.addEventListener('input', () => setVolume(Number(volumeRange.value)));
 
     toggleBtn.addEventListener('click', () => {
       if (!audio.src) {
@@ -303,6 +364,46 @@ import { href } from '../utils/url';
     color: var(--accent);
   }
 
+  /* 音量：小喇叭 + 向上弹出的竖向滑条 */
+  .player-volume {
+    display: flex;
+  }
+
+  /* 浮层挂在 dock 上而不是喇叭按钮上：喇叭按钮只有 1.5rem 宽，
+     而滑条旋转 90° 后「高度 = 原始宽度（7rem）」，以按钮为基准会压住 dock 本体。 */
+  .player-volume-pop {
+    position: absolute;
+    right: 0.7rem;
+    bottom: calc(100% + 0.5rem);
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    padding: 0.6rem 0.35rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-elevated);
+    box-shadow: 0 6px 20px rgb(0 0 0 / 14%);
+    /* 收起时必须能穿过点击（input 会从槽里溢出来），展开时才接收事件 */
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+
+  .player-dock:has([data-player-volume][aria-expanded='true']) .player-volume-pop {
+    pointer-events: auto;
+    opacity: 1;
+  }
+
+  /* 横向 range 旋转成竖向，这样键盘方向键、拖动、a11y 语义全部保持原生行为 */
+  .player-volume-range {
+    inline-size: 6rem;
+    block-size: 1.25rem;
+    margin: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+    transform: rotate(-90deg);
+  }
+
   /* 播放/暂停图标按状态切换 */
   .player-btn .icon-pause {
     display: none;
@@ -383,7 +484,10 @@ import { href } from '../utils/url';
       width: calc(100vw - 2rem);
     }
 
-    .player-time {
+    /* 小屏只留播放键 + 进度条 + 时间，切歌与音量交给横向滑动手势之外的空间 */
+    .player-time,
+    .player-volume,
+    .player-btn-sm {
       display: none;
     }
   }

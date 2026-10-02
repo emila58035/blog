@@ -25,3 +25,6 @@ pnpm-debug.log*
 # 临时提交信息文件（不留在仓库里）
 _msg.txt
 _commitmsg.txt
+
+# 浏览器验收脚本与 Edge 临时配置（CDP 驱动用，不入库）
+_audit/
