@@ -1,12 +1,12 @@
 # 个人博客 · Astro 7 实施方案
 
-- 方案版本：v8（2026-10-02），已按 6 条批注修正；**M0–M6 全部完成，站点已上线并验收**
+- 方案版本：v9（2026-10-02），已按 6 条批注修正；**M0–M6 全部完成，站点已上线并验收**
 - 线上地址：**<https://emila58035.github.io/blog/>**
 - 目标目录：`D:\Emila_58035\blog`
 - 部署：**GitHub Pages**（用户指定）
 - 范围：**不做评论功能**
 - MVP 特效：背景图 + 顶栏 + 粒子 + 固定音乐播放器（光标拖尾/点击爆裂后置）
-- 音乐源：**网易云歌单**（当前走公共 Meting 实例 `api.injahow.cn`，自建后端待替换）
+- 音乐源：**网易云歌单 `7572834094`《常听》**（经公共 Meting 实例 `api.injahow.cn` 取流，自建后端待替换）
 
 ---
 
@@ -258,7 +258,9 @@ afterSwap(newDoc, mediaSet);
 
 → 所以正确说法不是"免费歌 / VIP 歌"，而是 **看 `fee`：`1` 只能试听，`0` 与 `8` 可完整播放**。`fee=1` 的曲目在公共 API 上同样只给 30 秒（限流在网易云侧，不是 Meting 的服务端限制）。
 
-**筛选工具**：`tools/music/fetch-playlist.mjs`（`node tools/music/fetch-playlist.mjs <歌单ID>`）用网易云公开的播放列表接口一次性拿到整张歌单的 `fee`，过滤掉 `fee=1` 后写出 `public/audio/playlist.json`。用网易云接口而不是 Meting 接口的原因：**Meting 的歌单响应里没有 `fee` 字段**，无法据此过滤；而网易云接口免费歌无需 cookie（已验证）。
+**筛选工具**：`tools/music/fetch-playlist.mjs`（`node tools/music/fetch-playlist.mjs <歌单ID>`）读取整张歌单的 `fee`，过滤掉 `fee=1` 后写出 `public/audio/playlist.json`。用网易云接口而不是 Meting 接口的原因：**Meting 的歌单响应里没有 `fee` 字段**，无法据此过滤。
+
+> ⚠️ 本段最初写的是"用网易云**公开**的播放列表接口"（轻量端点 `/api/v6/playlist/detail`，免费歌无需 cookie）。**这个端点对用户自建歌单会截断 `tracks`，已在 v9 修掉** —— 见下面「★ 歌单导入截断 bug 与修复」。正确做法是官方前端的加密端点 `/weapi/v6/playlist/detail` + `Cookie: os=pc`。
 
 **端到端实测（CDP 驱动真实 Edge 154 + preview 产物）**：
 
@@ -275,6 +277,33 @@ afterSwap(newDoc, mediaSet);
 | 控制台报错 | ✅ 0 条 |
 
 **结论**：公共 API（`api.injahow.cn/meting/`）**两级取流都通**，可以先用；换自建后端时只需改 `tools/music/fetch-playlist.mjs` 的 `METING_API` 环境变量并重新生成歌单，**播放器代码完全不用动**。
+
+### ★ 歌单导入截断 bug 与修复（v9，2026-10-02）
+
+**症状**：导入自建歌单后曲目"少了一大半"（`7572834094`《常听》实际 78 首、`2608489519` 实际 171 首）。
+
+**根因**：轻量端点 `GET /api/v6/playlist/detail?id=<id>&n=1000` 对**用户自建歌单会截断 `playlist.tracks`**，而 `trackIds` 才是全量：
+
+| 歌单 | `trackCount` | `tracks`（带详情，被截断） | `trackIds` |
+|---|---|---|---|
+| `2608489519`（自建） | 171 | **6** | 171 |
+| `7572834094`（自建） | 78 | **10** | 78 |
+| `60198`（官方榜） | 89 | 89（不截断） | 89 |
+
+原脚本只读了 `playlist.tracks`，于是静默丢掉约 96% 的曲目。`n`/`limit`/`offset`/`s` 参数对用户歌单**全部无效**（`n=1000`/`500`/`100`/不传 都一样只回 6 或 10 首）。其他端点也不行：`/api/playlist/track/all` 与 `/api/v6/playlist/track/all` → `code=404`；`/api/playlist/detail/dynamic` → 无曲目；老版 `/api/playlist/detail?id=` → 返回空。
+
+**修复**：改用官方前端所用的加密端点 **`POST /weapi/v6/playlist/detail?csrf_token=`**：
+- body = `params`（AES-128-CBC 双层，`NONCE='0CoJUm6Qyw8W8jud'`、`IV='0102030405060708'`）+ `encSecKey`（RSA，`PUBKEY='010001'` + 固定 MODULUS，16 字节随机密钥反转后 `BigInt` 模幂，输出 `padStart(256,'0')`）
+- payload `{ id, offset: 0, total: true, limit: 1000, n: 1000, csrf_token: '' }`；纯 Node 内置 `crypto`，**零新增依赖**
+- **★ 必须带 `Cookie: os=pc`**。隔离实验（`2608489519`）：无 Cookie → 6；`NMTID=1` → 6；`appver=8.9.70` → 6；**`os=pc` → 171**。`limit` 在该端点真实生效（`limit=6`→6、`20`→20、`171`→171、`1000`→171）
+- 返回的 track 结构与轻量端点一致（`name`/`ar`/`fee`/`id`/`dt`），原有过滤与映射逻辑可直接沿用
+- 加入**完整性自检**：`tracks.length !== trackCount` 时报警；过滤掉的曲目超过半数时也报警 —— 防止将来再次静默丢歌
+
+**顺带纠正一个假说**：用户自己的歌单**不需要任何过滤**。《常听》78 首的 `fee` 分布 `{0: 19, 8: 59}` → 78/78 全部可完整播放，需要跳过 0 首；原先"看不见"的那些曲目经取流实测都是 `HTTP 200 audio/mpeg`、3.77–15.2 MB（320 kbps 完整音频，不是 30 秒片段）。**官方榜的可播比例（37%–99%）不能外推到自建歌单。**
+
+**修复后实测（CDP 驱动真实 Edge 154 + preview，全部通过）**：`count=78`、首曲 `Over The Sky — 黒石ひとみ`、点击后 `paused=false` `currentTime=3.16s` `duration=272.6s` `error=null`；客户端导航到 `/blog/archive/` 后 `5.68s` 仍在播、标题与曲目数保持、随机戳未变（元素被保留）；`httpErrors []`、`consoleErrors []`。线上 `https://emila58035.github.io/blog/audio/playlist.json` 已确认为 27,672 B / `playlistId=7572834094` / 78 首。
+
+**兜底方案（未采用，记录备查）**：只读 `trackIds`（全量、无需 cookie 与加密）+ 分批 `GET /api/song/detail?ids=[...]`。实测 78 首与 171 首都能一次完整返回；用 `trackIds` 顺序即网易云原顺序，还能发现已下架曲目。
 
 **降级顺序**（仍保留为兜底，正常路径不会走到）：
 1. localStorage 记忆播放进度 + 切页后自动 seek 续播（会有一丝断缝，零兼容风险）
@@ -366,6 +395,8 @@ afterSwap(newDoc, mediaSet);
 - 换歌单：`node tools/music/fetch-playlist.mjs <歌单ID>`，然后重新构建。播放器代码不用改。
 - 换后端 API：`METING_API=https://你的地址/meting/ node tools/music/fetch-playlist.mjs <歌单ID>`。
 - 播放器对 `src` 的处理：含 `://` 的当完整 URL 用，否则按站内路径补上当前源（此前自托管阶段用相对路径，这条兼容逻辑保留，将来想换回自托管也不用改代码）。
+- **取歌单必须走加密端点 + `Cookie: os=pc`**（v9 修复）：轻量端点 `/api/v6/playlist/detail` 对用户自建歌单只返回前 6~10 首，会静默丢歌，详见第 5 节「★ 歌单导入截断 bug 与修复」。
+- **当前歌单**：`7572834094`《常听》，78 首，`fee` 分布 `{0: 19, 8: 59}`，全部可完整播放，无需过滤。
 
 **备选：完全自托管**（不依赖任何第三方，也没有版权与限流风险）。把音频文件放进 `public/audio/`，歌单写成相对路径即可：
 
@@ -530,7 +561,7 @@ export default defineConfig({
 | 两个静态资源 `_astro/BaseLayout.*.css`（9886 B）与 `_astro/ClientRouter.*.js`（16357 B） | ✅ 200 |
 | `favicon.svg` | ✅ 解析为 `/blog/favicon.svg`，fetch 200 |
 | sitemap 各 `<loc>` | ✅ 全部带 `/blog/` 前缀 |
-| 播放器歌单 | ✅ 33 首，`src` 走 Meting 直链 |
+| 播放器歌单 | ✅ 78 首，`src` 走 Meting 直链 |
 | 真实时长 | ✅ 213.8s（证明不是 30 秒试听片段） |
 | 播放网络层 | ✅ `m801.music.126.net` `206` `audio/mpeg` |
 | 客户端导航后：元素身份 / 时间轴 / 播放状态 / 标题 / 深色主题 | ✅ 五项全部保持 |
@@ -645,6 +676,7 @@ npm run preview
 
 ## 13. 变更记录
 
+- **v9（2026-10-02）**：**修掉歌单导入静默丢歌的 bug，歌单换成 `7572834094`《常听》（78 首）**。根因：轻量端点 `/api/v6/playlist/detail` 对**用户自建歌单只返回前几首**（171 首的歌单只给 6 首、78 首的只给 10 首），而 `trackIds` 才是全量，脚本只读了 `tracks`，静默丢掉约 96% 的曲目；该端点的 `n`/`limit`/`offset` 参数对用户歌单无效。改用官方前端的加密端点 `POST /weapi/v6/playlist/detail`（AES-128-CBC 双层参数 + RSA 加密密钥，纯 Node `crypto`，零新增依赖），**并必须带 `Cookie: os=pc`**（隔离实验：无 cookie/换其他 cookie 都只回 6~10 首，`os=pc` 回 171；`limit` 在该端点真实生效）。新增两道完整性自检（数量与 `trackCount` 不符、过滤超过半数时报警），防止将来再次静默丢歌。**顺带纠正**：用户自建歌单常常一首都不需要过滤 ——《常听》`fee` 分布 `{0: 19, 8: 59}`，78/78 全可播；官方榜的可播比例不能外推。第 5 节新增「★ 歌单导入截断 bug 与修复」（含对照表、payload/加密参数、兜底方案 ②），README「更换音乐歌单」同步改写并加上"别退回轻量端点"的警示。实测：78 首加载正常、点击播放 `duration=272.6s`、跨页不断歌、0 报错；线上 `playlist.json` 已确认为 27,672 B / 78 首。**git 处理**：把本地未推送的 `e51b59f`（只含 6 首的错误歌单）`git reset --mixed` 回已推送基点后合并为一条提交 `ad08c72`，避免错误中间态留在历史里。
 - **v8（2026-10-02）**：**站点已上线**。用户推送 `main` 并完成 Settings → Pages 设置后，站点在 <https://emila58035.github.io/blog/> 可用。**对线上站点**（不只是本地产物）复跑完整验收：13 个页面/资源全部 200 且字节数与本地 `dist/` 一致、favicon 走 base 前缀、播放器 33 首 / 真实时长 213.8s / 206 `audio/mpeg`、客户端导航后元素身份·时间轴·播放状态·标题·深色主题五项全保持、刷新后主题与播放器正常、0 个 HTTP 错误与 0 条控制台报错。第 9 节新增线上验收数据表；README 新增「日常更新」一节（改完内容只需 `git add`/`commit`/`push`，CI 自动构建，不必手动构建或上传 `dist/`）。
 - **v7（2026-10-02）**：**M6 完成**。新增 `.github/workflows/deploy.yml`（`actions/checkout@v7` + `withastro/action@v6` + `actions/deploy-pages@v5`，权限 `contents: read`/`pages: write`/`id-token: write`，`node-version: 24`；YAML 已用 Python `yaml.safe_load` 校验结构与解析结果）。新增 `README.md`（给未来的自己：本地命令、写文格式、换歌单、部署前置设置、两条 persist 硬约束、降级行为、已知风险）。**构建期审计 10 个页面产物的全部 `href`/`src` 值，修掉两处 `base` 缺陷**：① `<link rel="icon" href="/favicon.svg">` 没走 `href()`，线上会 404 → 改为 `href={href('favicon.svg')}`；② 主题恢复脚本原本只在 SSR 首屏执行，客户端导航到新文档时 `<html>` 尚无 `data-theme`，会闪一下默认主题 → 改用 `astro:before-swap` 把主题同步到 `event.newDocument.documentElement`（已从 ClientRouter 产物确认该属性存在且可写，并已移除不再需要的 `data-astro-rerun`）。
 - **v6（2026-10-02）**：**M5 完成**。音乐源从自托管占位音频切到**真实网易云歌单**，经公共 Meting 实例 `https://api.injahow.cn/meting/`（用户决策：先跑通，自建后端留待替换）。新增 `tools/music/fetch-playlist.mjs`，用网易云播放列表接口取 `fee` 后过滤，生成 `public/audio/playlist.json`（89 首 → 33 首）。**APlayer/MetingJS 最终未引入**，仍是自研原生播放器。**确立一条纠正性规则**：能否完整播放由 `fee` 决定 —— `1` 只有 30 秒试听、`0` 与 `8` 完整，此前"免费歌/VIP 歌"的说法已全部改为按 `fee` 表述。第 5 节新增 M5 实测数据表（含网络层 `206 audio/mpeg` 证据与 213.8s 真实时长）。清理：删除 `_audit`（806 文件）、`tools/gen-placeholder-audio.mjs` 与三首占位 OGG；撤销 `.gitignore` 里的音频排除规则（`public/audio/` 现在只剩 11.7 KB 的 `playlist.json`）。

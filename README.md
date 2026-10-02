@@ -87,17 +87,23 @@ draft: false
 
 歌单数据来自 `public/audio/playlist.json`。
 
-**① 拿到网易云歌单 ID** —— 网页版进歌单，地址栏形如 `https://music.163.com/#/playlist?id=60198`，`id=` 后面那串数字就是。歌单**必须是公开的**，私密歌单拉不到。
+**① 拿到网易云歌单 ID** —— 网页版进歌单，地址栏形如 `https://music.163.com/#/playlist?id=7572834094`，`id=` 后面那串数字就是。歌单**必须是公开的**，私密歌单拉不到。
 
 **② 重新生成**：
 
 ```bash
-node tools/music/fetch-playlist.mjs <网易云歌单ID>   # 省略参数则用默认的 60198
+node tools/music/fetch-playlist.mjs <网易云歌单ID>   # 省略参数则用默认的 7572834094
 ```
 
-输出形如 `歌单共 89 首，保留 33 首，跳过 56 首（仅试听）`，然后 commit + push 即可。
+输出形如 `《常听》共 78 首，保留 78 首，跳过 0 首（仅试听）`，然后 commit + push 即可。
 
-脚本会用网易云的播放列表接口读取整张歌单的 `fee` 字段，只保留能完整播放的曲目：
+脚本通过官方前端的加密接口 `/weapi/v6/playlist/detail`（AES + RSA 加密参数，并带 `Cookie: os=pc`）读取整张歌单，再按 `fee` 字段只保留能完整播放的曲目：
+
+> ⚠️ **别退回轻量端点。** `/api/v6/playlist/detail` 对**用户自建歌单只返回前几首**
+> （实测 171 首的歌单只给 6 首、78 首的只给 10 首），而 `trackIds` 里才是全量 ——
+> 之前"导进来少了一大半"就是这个原因，且该端点的 `n`/`limit` 参数对用户歌单无效。
+> `os=pc` 这个 cookie 也是必需的，去掉后同一个加密端点同样只回 6~10 首。
+> 脚本现在会自检：数量与 `trackCount` 不符、或过滤掉超过一半时会打印警告。
 
 | `fee` | 含义 | 是否保留 |
 |---|---|---|
@@ -106,6 +112,7 @@ node tools/music/fetch-playlist.mjs <网易云歌单ID>   # 省略参数则用�
 | `1` | 只有 30 秒试听 | ❌ 自动跳过 |
 
 > 这条过滤是必需的。`fee:1` 的曲目在公共 Meting API 上同样只返回 30 秒（限流在网易云侧），放进歌单会播放一半就断。
+> 不过**自己的歌单常常一首都不需要过滤**：当前用的《常听》78 首全是 `fee=0`/`fee=8`，全部可完整播放。被过滤得多说明选的歌单偏向版权保护曲目，换一张往往比折腾播放器更省事。
 
 **③ 手动加减单曲**：可以直接编辑 `public/audio/playlist.json` 的 `tracks` 数组。
 
@@ -131,7 +138,7 @@ node tools/music/fetch-playlist.mjs <网易云歌单ID>   # 省略参数则用�
 **④ 换自建 Meting 后端**只需改环境变量，然后重新生成歌单，播放器代码不用动：
 
 ```bash
-METING_API=https://你的地址/ node tools/music/fetch-playlist.mjs 60198
+METING_API=https://你的地址/ node tools/music/fetch-playlist.mjs 7572834094
 ```
 
 ## 部署
