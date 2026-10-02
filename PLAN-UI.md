@@ -81,7 +81,7 @@
 **折叠形态的细节（我建议的做法，可再改）**
 
 - 圆钮上叠一圈 **SVG `stroke-dasharray` 进度环**，暂停时进度环变暗 —— 缩起时也知道在放哪首歌的哪个位置；
-- 正在播放时圆钮缓慢旋转（`@keyframes`），暂停时停住；
+- 正在播放时圆钮上的唱片纹路匀速旋转（`@keyframes player-spin 6s linear infinite`），暂停时用 `animation-play-state: paused` 停在当前角度；
 - 带歌名/歌手的 `title` 提示（原生 tooltip，零成本）。
 
 **⚠️ 一个必须一起处理的副作用：首屏闪烁**
@@ -295,13 +295,27 @@
 
 **实现要点**
 - 收起态由 dock 上的 `data-collapsed` 属性驱动：`.player-dock[data-collapsed='true']` 变 `3.1rem` 正方形、`border-radius: 50%`、`padding: 0`。
-- **进度环用 dock 的 `::after` + `conic-gradient` + 环形 `mask`**，不需要额外 DOM。`conic-gradient` 不认百分比，所以脚本在 `paint()` 里写 `--player-progress: ${pct * 3.6}deg`；暂停时环停在当前位置，播放时加一个 2.4s 的呼吸动画（放在 `@media (prefers-reduced-motion: no-preference)` 内）。
+- **进度环用 dock 的 `::after` + `conic-gradient` + 环形 `mask`**，不需要额外 DOM。`conic-gradient` 不认百分比，所以脚本在 `paint()` 里写 `--player-progress: ${pct * 3.6}deg`；暂停时环停在当前位置。
 - 播放键在收起态撑满整圆（`width/height: 100%`），整圆可点。
 - **dock 绝不能加 `overflow: hidden`**：歌单面板与音量浮层都是从 dock 上沿往上弹的绝对定位子元素，会被一起裁掉。收窄内容的活交给 `.player-body` / `.player-right` 各自的 `width: 0; overflow: hidden; opacity: 0`。
 - **`.player-body` / `.player-right` 展开时的淡入加了 100ms 延迟**（`transition: opacity 80ms ease 100ms`），否则文字会在还没撑开的窄壳子里闪一下。
 - 收纳逻辑只在 `(hover: hover) and (pointer: fine)` 下生效 —— 触摸屏没有"移开鼠标"这回事，收起来就点不回去了。
 - 计时 4 秒；**`busy()` 期间不收纳**：鼠标在 dock 上、焦点在 dock 内、歌单面板开着、音量浮层开着，任一成立就跳过。打开面板/浮层时反过来强制 `expandDock()`，保证"有东西开着就一定是展开态"。
 - 键盘 `focusin` 也展开，否则 Tab 进去的焦点落在了摸不到的地方。
+
+**★ 唱片纹理（U5 阶段按用户批注补做）**
+- 需求变更：原本只做了进度环的 2.4s 呼吸动画，用户批注「改成唱片纹理」。
+- 实现：纹路做在**播放键按钮**的 `::before` 上（收起态才生效），三层 background 自上而下——
+  1. `linear-gradient(118deg, transparent 40%, rgb(255 255 255 / 26%) 50%, transparent 60%)`：偏心高光，**压在最上层**；
+  2. `radial-gradient(circle at 50% 50%, rgb(255 255 255 / 16%) 0 15px, transparent 15px)`：唱片中心的标签面，播放/暂停图标正好落在上面；
+  3. `repeating-radial-gradient(circle at 50% 50%, transparent 0 3px, rgb(0 0 0 / 15%) 3px 4px)`：同心细沟。
+- `inset: -25%` 让纹路层比按钮大一圈，旋转时四角不外露；按钮上加 `overflow: hidden` 把纹路裁进圆里（**注意这是加在播放键上，不是 dock 上**，dock 的 `overflow: visible` 必须保留）。
+- 动画 `.player-spin 6s linear infinite`，**用 `animation-play-state` 控制**：未播放时 `paused`（角度定格，不会归零），`[data-playing='true']` 时 `running`。整体包在 `@media (prefers-reduced-motion: no-preference)` 里，减少动效的用户看到的是静止的纹路。
+- **★ 两个只有看图才发现的问题**：
+  1. 沟槽渐变若从 `0 1px` 起手，**正中心会落下一个 1px 的深色圆点**（`repeating-radial-gradient` 的第一圈是个实心小圆）。改成 `transparent 0 3px, rgb(0 0 0 / 15%) 3px 4px` 起手留白即可。
+  2. **纯同心圆是旋转对称的，转起来完全看不出在动** —— 必须有那个偏心高光（或偏心标签）才能读出旋转。这是做"唱片转动"这类效果的关键，不是可选装饰。
+- 验收：`_audit/u5-regress.cjs` **26/26 通过**（含展开态几何 368×61/左16、正文与右侧 160/128、播放键 34、gap 11.2px；面板 78 项且样式生效、完全在 dock 上方、可滚动、点播放键不关面板、点列表切歌面板不关；音量浮层 `bottom 716 ≤ dock.top 723`、`z-index 2 > 1`、滑条 20×96；收起态 50×50/圆角 50%/左 16、正文与右侧 0/0、播放键 48、三层纹理齐全、`overflow: hidden` + `position: relative`、进度环仍在；暂停时 `::before` 的变换矩阵定格、播放时矩阵在变且 `animation-play-state: running`；客户端导航后同一节点、仍在播放、纹路与进度环正常；无脚本错误、无 4xx/5xx）。
+- **★ 验收方法上的教训**：背景有飘动的粒子，**像素级截图比对会被它污染**，证明"在转"不能靠两张截图不同。改读 `getComputedStyle(el, '::before').transform` 的矩阵 —— 暂停时两次必须完全一致，播放时两次必须不同。另：`animation-name` / `animation-play-state` 在**展开态会回落到初始值**（`none` / `running`，因为选择器不匹配了），所以不能在外面读，必须在收起态读。
 
 **★ 截图暴露的坑：收起态忘了清 `gap`。** `.player-body` / `.player-right` 收成 0 宽之后，flex 容器里那两道 `0.7rem` 的 `gap` 仍然占位，内容总宽超过圆钮，`justify-content: center` 一居中就把播放键挤到了圆钮左外侧 —— 截图里是一个蓝圆偏在白色圆钮左边的怪样子。**19 项数值断言全部通过，只有看图才发现。** 修法：收起态加 `gap: 0`。（又一次印证 U3 的教训：**结构化验收不能代替看一眼真实渲染**。）
 
@@ -337,7 +351,7 @@
 1. **Hero 的文案**：现在默认用 `Emila 的博客` + 副标题 `记录一些想法，以及折腾过的东西。`（取自首页现有文案）。要改写请直接给文字。
 2. ~~**卡片列表每行几个**~~ **已定（m01675）：每行一列。**
 3. **归档页/标签页是否也卡片化**：默认**不**改（保持现在的紧凑列表），只有首页卡片化。
-4. **圆钮的动画强度**：**已实现**为"静止形态 + 白色进度环 + 播放时进度环缓慢呼吸（2.4s）"。没做旋转 —— 播放键图标裹在里面，转起来连图标一起转，反而花。如果你想要更明显的动效，可以换成旋转的唱片纹理，说一声。
+4. **圆钮的动画强度**：**已按用户批注定为唱片纹理**。收起态是一张迷你唱片——同心细沟 + 偏心的斜向高光 + 中心标签面，图标落在标签上；播放时匀速旋（6s/圈），暂停时停在当前角度。详见上文 U5 阶段的「★ 唱片纹理」小节。
 5. **阅读时长的显示位置**：默认放在文章头部 meta 行（与日期、标签同一行），归档页不加。
 6. ~~**是否要封面图的默认渐变样式**~~ **已定（m01710）：B2** —— 无 `cover` 的文章**不渲染封面区**，卡片更紧凑、文字密度更高；接受同一列里卡片高低不齐。第 5.2 节的 B1/B3 作废。
 

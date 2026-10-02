@@ -516,23 +516,53 @@ import { href } from '../utils/url';
     pointer-events: none;
   }
 
-  /* 播放时进度环缓慢呼吸一下，静止时不闪 */
-  @media (prefers-reduced-motion: no-preference) {
-    .player-dock[data-collapsed='true']:has([data-playing='true'])::after {
-      animation: player-ring-pulse 2.4s ease-in-out infinite;
-    }
-  }
-
-  @keyframes player-ring-pulse {
-    50% {
-      opacity: 0.5;
-    }
-  }
-
   /* 整圆都是播放键的手感 */
   .player-dock[data-collapsed='true'] [data-player-toggle] {
+    position: relative;
     width: 100%;
     height: 100%;
+    /* 纹路要裁进圆里 */
+    overflow: hidden;
+  }
+
+  /* 唱片纹路：同心细沟 + 一道偏心高光。纯同心圆是旋转对称的，转起来看不出
+     动静，所以必须带一个不对称的高光（或标签）才能读出在转。 */
+  .player-dock[data-collapsed='true'] [data-player-toggle]::before {
+    content: '';
+    position: absolute;
+    /* 比按钮大一圈，旋转时四角不会露出空白 */
+    inset: -25%;
+    border-radius: 50%;
+    background:
+      /* 偏心的一道高光，压在最上层：同心圆是旋转对称的，没有它就完全看不出在转 */
+      linear-gradient(118deg, transparent 40%, rgb(255 255 255 / 26%) 50%, transparent 60%),
+      /* 唱片中心那块干净的标签面，播放/暂停图标正好落在上面 */
+      radial-gradient(circle at 50% 50%, rgb(255 255 255 / 16%) 0 15px, transparent 15px),
+      /* 同心细沟。起手留 3px 空白，否则中心会落下一个 1px 的深色圆点 */
+      repeating-radial-gradient(
+        circle at 50% 50%,
+        transparent 0 3px,
+        rgb(0 0 0 / 15%) 3px 4px
+      );
+    pointer-events: none;
+  }
+
+  /* 播放时唱片匀速转，暂停就停在当前角度（animation-play-state 不会归零） */
+  @media (prefers-reduced-motion: no-preference) {
+    .player-dock[data-collapsed='true'] [data-player-toggle]::before {
+      animation: player-spin 6s linear infinite;
+      animation-play-state: paused;
+    }
+
+    .player-dock[data-collapsed='true'] [data-player-toggle][data-playing='true']::before {
+      animation-play-state: running;
+    }
+  }
+
+  @keyframes player-spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .player-dock[data-collapsed='true'] .player-btn:hover {
