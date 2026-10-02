@@ -183,7 +183,7 @@
 |---|---|---|---|
 | U1 | 播放器：验证 fixed 定位能否扛住客户端导航（原计划改代码，实测后改为纯验证） | 三次导航后位置不飘、跨页不断歌仍成立 | ✅ **已完成，零代码改动** |
 | U2 | 音量按钮 + 竖向滑条 | 音量生效并持久化；刷新后保持；不影响自动播放策略 | ✅ **已完成，12/12 通过** |
-| U3 | 歌单面板 | 78 首可滚动；当前曲高亮且自动滚入视野；点击即切歌；面板打开时不被自动收纳 | ⬜ |
+| U3 | 歌单面板 | 78 首可滚动；当前曲高亮且自动滚入视野；点击即切歌；面板打开时不被自动收纳 | ✅ **已完成，21/21 通过** |
 | U4 | 自动收纳成 3rem 圆钮 | 悬停展开/移开收起；进度环反映播放进度；切页后状态保持 | ⬜ |
 | U5 | 首页 Hero + 卡片列表 | 无 cover 的文章走 B2（不占位）；40vh 与内容栏对齐；移动端不塌 | ⬜ |
 | U6 | 文章页：TOC + 阅读时长 + 灯箱 | 锚点跳转正确；移动端 TOC 可折叠；灯箱键盘操作与多图切换可用 | ⬜ |
@@ -246,6 +246,46 @@
 | 控制台异常 | `[]` |
 
 **小屏调整**：`@media (max-width: 30rem)` 下隐藏 `.player-volume` 与 `.player-btn-sm`，只留播放键 + 进度条，避免 dock 过窄时按钮挤成一团（原有的"隐藏时间文字"保留）。
+
+### ★ U3 实测结果（2026-10-02，同一套 CDP 环境）
+
+驱动脚本：`_audit/u3-verify.cjs`（验收，21 项）、`_audit/u3-style.cjs`（样式是否真的生效）、`_audit/u3-debug2.cjs`（复刻时序定位问题）。
+
+**实现要点**
+- 面板是 `<div class="player-playlist" data-player-panel hidden>`，挂在 dock 下、`bottom: calc(100% + 0.5rem)` 向上展开；`max-height: min(20rem, 60vh)`，自己管 `overflow-y: auto`（**dock 不能设 `overflow: hidden`，会连面板一起裁掉**）。
+- 列表项内容由 `buildPanel()` 用 `innerHTML` 生成（78 项），点击用**事件委托**挂在 panel 上 —— 面板内容会被整体重建，挂在单项上的监听会随之消失。
+- 点 dock 之外才收起；`Esc` 收起；打开时 `syncActive()` 把当前曲高亮并把 `scrollTop` 调到该项可见。
+
+**★ 踩到的两个坑（都是"普通构建不报错、只有真看页面才发现"）**
+
+1. **Astro scoped 样式对 JS 生成的节点静默失效。** 一开始用 `document.createElement()` 造列表项，但 `.player-playlist-item` 写在组件的 scoped `<style>` 里，编译后选择器是 `.player-playlist-item[data-astro-cid-g2mknjow]`；`data-astro-cid-*` **只有编译器渲染 `.astro` 模板 HTML 时才会写上**，JS 造出来的节点没有这个属性 → 13 条规则全部不匹配，面板渲染成一堆浏览器默认样式的按钮、条目互相挤在一起。**DOM 断言（`hidden`、`children.length`、`scrollTop`）全都通过，只有截图暴露了问题。**
+   - 修法：这一组选择器移到 `<style is:global>`（见文件末尾的说明注释）。以后凡是"JS 生成节点再套样式"，都要放全局块或给元素补 `[data-astro-cid-xxx]`。
+   - 教训：**结构化验收 + 数值断言不能代替看一眼真实渲染**。
+2. **`panel.contains(target)` 判外点不可靠。** 点列表项会走 `load() → buildPanel() → replaceChildren()/innerHTML`，等事件冒泡到 `document` 时被点的那个按钮已经被摘掉，`contains()` 返回 false → **每挑一首歌面板就关一次**。改用 `event.composedPath()`（记录事件派发那一刻的路径，元素已移除也有效），并且判定范围是整个 **dock** 而不是"面板 + 列表按钮"，否则点播放键/切歌键也会顺手关掉面板。
+
+**验收数据（21/21 通过）**
+
+| 检查 | 结果 |
+|---|---|
+| 面板初始收起 / 已渲染 78 项 | true / 78 |
+| 点按钮展开、`aria-expanded` 同步 | true |
+| 面板完全在 dock 上方（`pop.t=396 b=716`，`dock.t=723`） | true |
+| 面板自身可滚动 | true |
+| 第 1 首高亮且 `scrollTop` 为 0 | true |
+| 点播放键**不会**收起面板 | true |
+| 点第 60 项即切歌、标题同步 | `Camelia` / true |
+| 选曲后面板保持打开 + 高亮 + 已滚入视野 | true（`scrollTop 2204`） |
+| 点外部收起 / `Esc` 收起 | true / true |
+| 客户端导航后仍是同一 dock 节点 | true |
+| 导航后歌曲继续播放 | 3.94s → 6.16s |
+| 导航后面板收起但列表完整（78 项） | true |
+| 导航后重开面板仍高亮且滚到当前曲 | true |
+| 导航后点列表仍能切歌 | `天球の下の奇蹟` |
+| 鼠标移开后不自动收纳 | true |
+| 音量浮层层级高于面板（`popZ 2 > panelZ 1`） | true |
+| 控制台异常 / HTTP 错误 | `[]` / `[]` |
+
+> 测试隔离的经验：`localStorage` 里残留的 `player.state` 会让"第 1 首高亮"这类断言随机失败。脚本现在先导航到 `http://localhost:4321/`（同源但**不是**站点根路径，Astro 不加载、播放器不初始化）再 `localStorage.clear()`，然后才进 `/blog/`。
 
 ## 9. 待你拍板的小项
 

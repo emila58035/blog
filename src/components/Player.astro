@@ -23,6 +23,8 @@ import { href } from '../utils/url';
 >
   <audio data-player-audio preload="metadata"></audio>
 
+  <div class="player-playlist" data-player-panel hidden aria-label="播放列表"></div>
+
   <div class="player-volume-pop" data-player-volume-pop hidden>
     <input
       class="player-volume-range"
@@ -57,6 +59,17 @@ import { href } from '../utils/url';
 
   <div class="player-right">
     <span class="player-time" data-player-time>0:00</span>
+    <button class="player-btn player-btn-sm" type="button" data-player-list aria-label="播放列表" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M4 6h11M4 12h11M4 18h7M18 13v6.2a1.8 1.8 0 1 1-1.4-1.75V13z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          stroke-linejoin="round"></path>
+      </svg>
+    </button>
     <div class="player-volume">
       <button class="player-btn player-btn-sm" type="button" data-player-volume aria-label="音量" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -151,6 +164,12 @@ import { href } from '../utils/url';
       return `${m}:${String(s).padStart(2, '0')}`;
     };
 
+    const apply = (track: Track) => {
+      audio.src = resolveSrc(track.src);
+      titleEl.textContent = track.title;
+      artistEl.textContent = track.artist ?? '';
+    };
+
     const paint = () => {
       const dur = audio.duration;
       const pct = Number.isFinite(dur) && dur > 0 ? (audio.currentTime / dur) * 100 : 0;
@@ -181,6 +200,7 @@ import { href } from '../utils/url';
       const data = (await res.json()) as { tracks?: Track[] };
       tracks = data.tracks ?? [];
       dock.dataset.count = String(tracks.length);
+      buildPanel(tracks); // 面板与歌单同生共死：拿到数据就渲染一次，select 时也有东西可高亮
       return tracks;
     };
 
@@ -190,12 +210,6 @@ import { href } from '../utils/url';
      */
     const resolveSrc = (src: string) =>
       src.includes('://') ? src : new URL(src, window.location.origin).href;
-
-    const apply = (track: Track) => {
-      audio.src = resolveSrc(track.src);
-      titleEl.textContent = track.title;
-      artistEl.textContent = track.artist ?? '';
-    };
 
     const step = (delta: number) => {
       const count = Number(dock.dataset.count) || 1;
@@ -212,6 +226,7 @@ import { href } from '../utils/url';
 
       state.index = ((index % list.length) + list.length) % list.length;
       apply(list[state.index]);
+      syncActive();
 
       if (seekTo > 0) {
         // 必须在拿到元数据之后才能 seek，否则浏览器会丢弃这次赋值
@@ -230,6 +245,94 @@ import { href } from '../utils/url';
      * 既避开自动播放策略，也避免"只是刷新页面就突然开始放歌"。
      */
     const restore = (index: number, time: number, autoplay: boolean) => load(index, time, autoplay);
+
+    // ---- 歌单面板 ----
+    // 面板也是 dock 的子元素，跟 dock 一起被持久化搬运，监听器不会丢。
+    // 面板打开本身不影响音频，所以不存在"导航后需要恢复面板"的问题。
+    const listBtn = dock.querySelector<HTMLButtonElement>('[data-player-list]')!;
+    const panel = dock.querySelector<HTMLElement>('[data-player-panel]')!;
+    let panelOpen = false;
+
+    // 当前曲滚入视野。panel 隐藏时 scrollHeight 为 0，直接跳过，别白算 offsetTop。
+    const scrollActiveIntoView = () => {
+      if (!panelOpen) return;
+      const active = panel.querySelector<HTMLElement>('[data-active="true"]');
+      if (!active) return;
+      const itemTop = active.offsetTop;
+      const itemBottom = itemTop + active.offsetHeight;
+      if (itemTop < panel.scrollTop) panel.scrollTop = itemTop;
+      else if (itemBottom > panel.scrollTop + panel.clientHeight) {
+        panel.scrollTop = itemBottom - panel.clientHeight;
+      }
+    };
+
+    // 每一项都用 innerHTML 生成而不是 createElement：Astro 的 <style> 默认是 scoped，
+    // 选择器会带 [data-astro-cid-xxx]，而这个属性只由编译器写进 .astro 模板里渲染出的
+    // HTML。用 createElement 造出来的节点没有这个属性，样式会静默失效（普通 build 不报错，
+    // 只有肉眼看截图才发现）。innerHTML 生成的节点同样不会带属性，所以这一组选择器
+    // 放在了下面的 <style is:global> 里，见文件末尾的说明。
+    const escapeHtml = (text: string) =>
+      text
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+
+    const buildPanel = (list: Track[]) => {
+      panel.innerHTML = list
+        .map(
+          (track, index) => `
+            <button type="button" class="player-playlist-item" data-index="${index}">
+              <span class="player-playlist-index">${index + 1}</span>
+              <span class="player-playlist-text">
+                <span class="player-playlist-name">${escapeHtml(track.title)}</span>
+                <span class="player-playlist-artist">${escapeHtml(track.artist ?? '')}</span>
+              </span>
+            </button>`
+        )
+        .join('');
+    };
+
+    // 当前曲高亮。面板没打开也照样记状态，下次打开就能滚到正确位置。
+    const syncActive = () => {
+      panel.querySelectorAll<HTMLElement>('[data-index]').forEach((item) => {
+        item.dataset.active = item.dataset.index === String(state.index) ? 'true' : 'false';
+      });
+      scrollActiveIntoView();
+    };
+
+    const setPanel = (open: boolean) => {
+      panelOpen = open;
+      panel.hidden = !open;
+      listBtn.setAttribute('aria-expanded', String(open));
+      if (open) syncActive();
+    };
+
+    listBtn.addEventListener('click', () => setPanel(panel.hidden));
+    // 用事件委托而不是给每一项挂监听：面板内容会被 replaceChildren/innerHTML 整体换掉，
+    // 挂在 panel 上的委托监听不受重建影响。
+    panel.addEventListener('click', (event) => {
+      const item = (event.target as HTMLElement).closest<HTMLElement>('[data-index]');
+      if (!item) return;
+      audio.pause();
+      void load(Number(item.dataset.index), 0, true);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && panelOpen) setPanel(false);
+    });
+    // 点 dock（面板、列表按钮、播放键、音量、切歌键）以外的地方才收起。
+    // 两个坑都在这里：
+    //   1. 必须用 composedPath() 而不是 panel.contains(target)：点列表项会触发
+    //      load() -> buildPanel() -> replaceChildren()，等事件冒泡到 document 时
+    //      被点的按钮已经被摘掉，contains() 返回 false，于是挑一首歌就关一次面板。
+    //   2. 判定范围要是整个 dock 而不是"面板 + 列表按钮"：否则点播放键、切歌键
+    //      或音量键也会顺手把面板关掉。
+    // composedPath() 记录事件派发那一刻的路径，元素已被移除也依然有效。
+    document.addEventListener('click', (event) => {
+      if (!panelOpen) return;
+      if (event.composedPath().includes(dock)) return;
+      setPanel(false);
+    });
 
     // ---- 音量 ----
     // 范围输入是 dock 的子元素：切页时随 dock 一起被原子搬运，原生监听器不会丢。
@@ -364,6 +467,48 @@ import { href } from '../utils/url';
     color: var(--accent);
   }
 
+  .player-playlist {
+    position: absolute;
+    left: 0.7rem;
+    right: 0.7rem;
+    bottom: calc(100% + 0.5rem);
+    z-index: 1;
+    max-height: min(20rem, 60vh);
+    padding: 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-elevated);
+    box-shadow: 0 6px 20px rgb(0 0 0 / 14%);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform-origin: bottom center;
+    animation: player-panel-in 0.16s ease;
+  }
+
+  @keyframes player-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.35rem);
+    }
+  }
+
+  /* 滚动条在浅底上给一点点存在感，深色主题下不要显得突兀 */
+  .player-playlist::-webkit-scrollbar {
+    width: 0.5rem;
+  }
+
+  .player-playlist::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: var(--border);
+    background-clip: content-box;
+  }
+
+  .player-playlist::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+    background-clip: content-box;
+  }
+
   /* 音量：小喇叭 + 向上弹出的竖向滑条 */
   .player-volume {
     display: flex;
@@ -375,7 +520,7 @@ import { href } from '../utils/url';
     position: absolute;
     right: 0.7rem;
     bottom: calc(100% + 0.5rem);
-    z-index: 1;
+    z-index: 2;
     display: grid;
     place-items: center;
     padding: 0.6rem 0.35rem;
@@ -484,7 +629,7 @@ import { href } from '../utils/url';
       width: calc(100vw - 2rem);
     }
 
-    /* 小屏只留播放键 + 进度条 + 时间，切歌与音量交给横向滑动手势之外的空间 */
+    /* 小屏只留播放键 + 进度条 + 时间，切歌、音量与歌单交给横向滑动手势之外的空间 */
     .player-time,
     .player-volume,
     .player-btn-sm {
@@ -500,5 +645,86 @@ import { href } from '../utils/url';
     .player-btn:hover {
       transform: none;
     }
+
+    .player-playlist {
+      animation: none;
+    }
+  }
+</style>
+
+<!--
+  歌单项的样式必须是 is:global。
+
+  Astro 的 <style> 默认是 scoped，编译后选择器会带 [data-astro-cid-xxx]，而这个属性
+  只有编译器渲染 .astro 模板里的 HTML 时才会写上去。歌单是按运行时数据用 JS 生成的
+  （见上面的 buildPanel），造出来的节点没有这个属性，所有 scoped 选择器都不匹配 ——
+  普通构建不会报错，面板看上去就是一堆浏览器默认样式的按钮，只有真去看页面才发现。
+
+  同理：以后任何"由 JS 生成节点再套样式"的地方，都要放到这里，或者给元素补上
+  [data-astro-cid-xxx]。
+-->
+<style is:global>
+  .player-playlist-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: none;
+    border-radius: calc(var(--radius) - 3px);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.78rem;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .player-playlist-item:hover {
+    background: var(--accent-soft);
+  }
+
+  .player-playlist-item[data-active='true'] {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .player-playlist-index {
+    flex: none;
+    width: 1.6rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.72rem;
+    text-align: right;
+  }
+
+  .player-playlist-item[data-active='true'] .player-playlist-index {
+    color: inherit;
+  }
+
+  .player-playlist-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.3;
+  }
+
+  .player-playlist-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .player-playlist-artist {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+  }
+
+  .player-playlist-item[data-active='true'] .player-playlist-artist {
+    color: inherit;
+    opacity: 0.75;
   }
 </style>
