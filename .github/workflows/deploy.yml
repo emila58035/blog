@@ -1,0 +1,37 @@
+name: Deploy to GitHub Pages
+
+on:
+  # 推送到 main 分支时自动构建并部署
+  push:
+    branches: [main]
+  # 也可以在 Actions 标签页手动触发
+  workflow_dispatch:
+
+# 允许这个工作流克隆仓库并创建 Pages 部署
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v7
+      - name: 安装依赖、构建站点并上传产物
+        uses: withastro/action@v6
+        with:
+          # 与本机（Node v24.16.0）保持一致；action 的默认值也是 24，这里写死避免将来默认值变动
+          node-version: 24
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 部署到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

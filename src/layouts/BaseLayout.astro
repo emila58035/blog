@@ -4,6 +4,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Player from '../components/Player.astro';
 import Particles from '../components/effects/Particles.astro';
+import { href } from '../utils/url';
 import '../styles/global.css';
 
 interface Props {
@@ -23,15 +24,21 @@ const pageTitle = title ? `${title} · ${siteName}` : siteName;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <ClientRouter />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href={href('favicon.svg')} />
     {description && <meta name="description" content={description} />}
     <title>{pageTitle}</title>
-    <script is:inline data-astro-rerun>
+    <script is:inline>
       (() => {
         const saved = localStorage.getItem('theme');
         if (saved === 'light' || saved === 'dark') {
           document.documentElement.dataset.theme = saved;
         }
+        // 客户端导航时，新页面的 <html> 在交换那一刻还没有主题属性。
+        // 在交换前同步补上，避免每次跳页都闪一下默认主题。
+        document.addEventListener('astro:before-swap', (event) => {
+          const theme = document.documentElement.dataset.theme;
+          if (theme) event.newDocument.documentElement.dataset.theme = theme;
+        });
       })();
     </script>
   </head>

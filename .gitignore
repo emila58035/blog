@@ -21,3 +21,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# 临时提交信息文件（不留在仓库里）
+_msg.txt
+_commitmsg.txt
