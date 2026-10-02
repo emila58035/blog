@@ -137,62 +137,35 @@ import { href } from '../utils/url';
       });
     };
 
-    const load = async (index: number, seekTo = 0, autoplay = false) => {
+    interface Track {
+      title: string;
+      artist?: string;
+      src: string;
+    }
+
+    // 歌单只请求一次；导航后脚本不再重复初始化，所以缓存是安全的
+    let tracks: Track[] = [];
+
+    const loadTracks = async (): Promise<Track[]> => {
+      if (tracks.length > 0) return tracks;
       const res = await fetch(dock.dataset.playlist!);
-      const data = (await res.json()) as {
-        tracks: { title: string; artist?: string; src: string }[];
-      };
-      const tracks = data.tracks;
-      if (tracks.length === 0) return;
-
-      state.index = ((index % tracks.length) + tracks.length) % tracks.length;
-      const track = tracks[state.index];
-
-      audio.src = track.src;
-      titleEl.textContent = track.title;
-      artistEl.textContent = track.artist ?? '';
+      const data = (await res.json()) as { tracks?: Track[] };
+      tracks = data.tracks ?? [];
       dock.dataset.count = String(tracks.length);
-
-      if (seekTo > 0) {
-        audio.currentTime = seekTo;
-      }
-      if (autoplay) play();
-      paint();
+      return tracks;
     };
 
     /**
-     * 先只设 src 并加载元数据，拿到持久化的进度后再 seek。
-     * 直接在 metadata 之前写 currentTime 会被浏览器丢弃。
+     * 自托管音频写成站内相对路径，第三方直链写成完整 URL。
+     * 用 `includes('://')` 区分 —— 委托给 URL 构造函数在这里只会添乱。
      */
-    const restore = async (index: number, time: number, autoplay: boolean) => {
-      const res = await fetch(dock.dataset.playlist!);
-      const data = (await res.json()) as {
-        tracks: { title: string; artist?: string; src: string }[];
-      };
-      const tracks = data.tracks;
-      if (tracks.length === 0) return;
+    const resolveSrc = (src: string) =>
+      src.includes('://') ? src : new URL(src, window.location.origin).href;
 
-      state.index = ((index % tracks.length) + tracks.length) % tracks.length;
-      const track = tracks[state.index];
-      dock.dataset.count = String(tracks.length);
-      audio.src = track.src;
+    const apply = (track: Track) => {
+      audio.src = resolveSrc(track.src);
       titleEl.textContent = track.title;
       artistEl.textContent = track.artist ?? '';
-
-      if (time > 0) {
-        await new Promise<void>((resolve) => {
-          if (audio.readyState >= 1) return resolve();
-          audio.addEventListener('loadedmetadata', () => resolve(), { once: true });
-        });
-        try {
-          audio.currentTime = Math.min(time, audio.duration || time);
-        } catch {
-          /* 元数据异常时从 0 开始 */
-        }
-      }
-
-      if (autoplay) play();
-      paint();
     };
 
     const step = (delta: number) => {
@@ -203,6 +176,31 @@ import { href } from '../utils/url';
         void load(next, 0, true);
       }
     };
+
+    const load = async (index: number, seekTo = 0, autoplay = false) => {
+      const list = await loadTracks();
+      if (list.length === 0) return;
+
+      state.index = ((index % list.length) + list.length) % list.length;
+      apply(list[state.index]);
+
+      if (seekTo > 0) {
+        // 必须在拿到元数据之后才能 seek，否则浏览器会丢弃这次赋值
+        await new Promise<void>((resolve) => {
+          if (audio.readyState >= 1) return resolve();
+          audio.addEventListener('loadedmetadata', () => resolve(), { once: true });
+        });
+        audio.currentTime = Math.min(seekTo, audio.duration || seekTo);
+      }
+      if (autoplay) play();
+      paint();
+    };
+
+    /**
+     * 刷新后恢复上次的曲目与进度。autoplay 为 false 时不自动出声 ——
+     * 既避开自动播放策略，也避免"只是刷新页面就突然开始放歌"。
+     */
+    const restore = (index: number, time: number, autoplay: boolean) => load(index, time, autoplay);
 
     toggleBtn.addEventListener('click', () => {
       if (!audio.src) {

@@ -1,11 +1,11 @@
 # 个人博客 · Astro 7 实施方案
 
-- 方案版本：v5（2026-10-02），已按 6 条批注修正；M0–M4 已落地，M3/M4 均经真实浏览器实测通过
+- 方案版本：v6（2026-10-02），已按 6 条批注修正；M0–M5 已落地，M3/M4/M5 均经真实浏览器实测通过
 - 目标目录：`D:\Emila_58035\blog`
 - 部署：**GitHub Pages**（用户指定）
 - 范围：**不做评论功能**
 - MVP 特效：背景图 + 顶栏 + 粒子 + 固定音乐播放器（光标拖尾/点击爆裂后置）
-- 音乐源：**网易云歌单**（依赖自建 Meting API）
+- 音乐源：**网易云歌单**（当前走公共 Meting 实例 `api.injahow.cn`，自建后端待替换）
 
 ---
 
@@ -56,13 +56,12 @@ D:\Emila_58035\blog\
 ├─ package.json
 ├─ tsconfig.json               # extends "astro/tsconfigs/base"
 ├─ tools/
-│  └─ gen-placeholder-audio.mjs  # 合成占位曲目（换真实音乐后即可不用）
+│  └─ music/fetch-playlist.mjs  # 从网易云歌单生成 public/audio/playlist.json
 ├─ .github/workflows/deploy.yml  # M6 待建
 ├─ public/
 │  ├─ favicon.svg
 │  ├─ cursor/arrow.png         # 自定义光标（public = 原样拷贝，正合适）
-│  └─ audio/                   # 自托管音乐：playlist.json + *.ogg
-│                              # ⚠️ 音频文件已在 .gitignore 中，见 6.4b 部署约束
+│  └─ audio/playlist.json      # 歌单（网易云直链，由 tools/music/fetch-playlist.mjs 生成）
 └─ src/
    ├─ content.config.ts        # ★ 不是 src/content/config.ts
    ├─ content/posts/*.md
@@ -245,6 +244,36 @@ afterSwap(newDoc, mediaSet);
 - 结论：**`transition:persist` 对 `<audio>` 有效，官方文档缺 `<audio>` 示例但机制通用**。方案的心脏成立，不需要启用 localStorage 降级作为主方案。
 - 顺带否掉的写法：手工 `setAttribute('transition:persist', '')` **不起作用**（运行时只认 `data-astro-transition-persist`）——实测中该写法元素在导航后消失。
 
+### ★ M5 实测结果（2026-10-02，真实网易云歌单经公共 Meting API，**通过**）
+
+**先确立一条决定性规则（实测，纠正了此前的说法）**：能否完整播放由网易云的 **`fee` 字段**决定，与歌单来源无关。
+
+| fee | 结果 | 实测证据 |
+|---|---|---|
+| `1` | **只有 30 秒试听** | 多首不同歌返回字节数**完全相同**的 481,115 字节 ≈ 128 kbps × 30.07s |
+| `8` | **完整音频 320 kbps** | 如 `3410257938` 返回 8,554,623 字节 / 320 kbps @ 44100 Hz ≈ 214s |
+| `0` | 免费，完整 | 单曲验证通过 |
+
+→ 所以正确说法不是"免费歌 / VIP 歌"，而是 **看 `fee`：`1` 只能试听，`0` 与 `8` 可完整播放**。`fee=1` 的曲目在公共 API 上同样只给 30 秒（限流在网易云侧，不是 Meting 的服务端限制）。
+
+**筛选工具**：`tools/music/fetch-playlist.mjs`（`node tools/music/fetch-playlist.mjs <歌单ID>`）用网易云公开的播放列表接口一次性拿到整张歌单的 `fee`，过滤掉 `fee=1` 后写出 `public/audio/playlist.json`。用网易云接口而不是 Meting 接口的原因：**Meting 的歌单响应里没有 `fee` 字段**，无法据此过滤；而网易云接口免费歌无需 cookie（已验证）。
+
+**端到端实测（CDP 驱动真实 Edge 154 + preview 产物）**：
+
+| 检查项 | 结果 |
+|---|---|
+| 歌单加载 | ✅ 33 首（原 89 首，过滤掉 56 首 `fee=1`） |
+| 播放器使用 Meting 直链 | ✅ `src` = `.../meting/?server=netease&type=url&id=3410257938` |
+| **真实时长（不是 30 秒片段）** | ✅ `duration = 213.8s`，`readyState = 4` |
+| 点击后真实播放 | ✅ `currentTime` 推进到 5.75s，`paused=false` |
+| 网络层证据 | ✅ 落地 `m801.music.126.net`，`206 Partial Content` + `audio/mpeg`（流式） |
+| 媒体错误 | ✅ `audio.error === null` |
+| 跨页导航后不断歌 | ✅ 5.75s → 8.28s，标题/曲目数保持 |
+| 导航后切下一首 | ✅ 切到 `BbY WOW`，时长 225.8s 正常 |
+| 控制台报错 | ✅ 0 条 |
+
+**结论**：公共 API（`api.injahow.cn/meting/`）**两级取流都通**，可以先用；换自建后端时只需改 `tools/music/fetch-playlist.mjs` 的 `METING_API` 环境变量并重新生成歌单，**播放器代码完全不用动**。
+
 **降级顺序**（仍保留为兜底，正常路径不会走到）：
 1. localStorage 记忆播放进度 + 切页后自动 seek 续播（会有一丝断缝，零兼容风险）
 2. 播放器改为固定在侧栏、不追求跨页连续（接受每页重载）
@@ -327,14 +356,24 @@ afterSwap(newDoc, mediaSet);
 > `e.name=e.name||e.title||"Audio name", e.artist=e.artist||e.author||"Audio artist", e.cover=e.cover||e.pic, e.type=e.type||"normal"`
 > 即 `name/title`、`artist/author`、`cover/pic` 互为兜底 —— 所以返回 `title/author/pic` 结构的 API（如 i-meto）APlayer 能直接吃下。
 
-### 6.4b 自托管阶段（M4 现状）与部署约束
+### 6.4b 音乐源：M5 已切到网易云歌单（自托管路径保留为备选）
 
-M4 已按三阶段方案的第一阶段实现：**播放器不依赖任何外部 API**，歌单来自仓库内的 `public/audio/playlist.json`，音频是自托管文件。
+**当前实现（M5 已落地并实测通过）**：播放器读取 `public/audio/playlist.json`，其内容由 `tools/music/fetch-playlist.mjs` 从网易云歌单生成。
 
-- 歌单格式（`public/audio/playlist.json`）：`{"tracks":[{"title","artist","src"}]}`，`src` 用站内绝对路径（含 `base` 前缀，如 `/blog/audio/xxx.ogg`）。
-- 占位音频由 `tools/gen-placeholder-audio.mjs` 合成，换真实音乐时替换 `public/audio/` 下的文件并改 `playlist.json` 即可，播放器代码不用动。
-- 支持的格式按浏览器兼容性排序：**`.ogg`（Vorbis）体积最优** > `.mp3` > `.m4a`。占位曲目是 16 kHz 单声道合成的 WAV 转 OGG，三首 40 秒共 219.8 KB。
-- ⚠️ **部署约束**：`.gitignore` 已排除 `public/audio/*.{ogg,mp3,wav,flac,m4a}`。因为 M6 走 GitHub Actions 从仓库构建，**这些音频必须另有同步途径，否则线上播放器会 404**。可选：① 把音频文件改为提交进仓库（体积大时考虑 Git LFS）；② M5 切到网易云直链后自托管文件即不再需要（这也是三阶段方案里第二阶段的正常结局）。M6 做 workflow 时必须把这条一起解决。
+- 歌单 JSON 结构：`{ "source", "api", "server", "playlistId", "tracks": [{ "id", "title", "artist", "src", "cover", "lrc" }] }`。`src`/`cover`/`lrc` 都是 Meting API 地址，播放时由该 API 302 到网易云 CDN。
+- 换歌单：`node tools/music/fetch-playlist.mjs <歌单ID>`，然后重新构建。播放器代码不用改。
+- 换后端 API：`METING_API=https://你的地址/meting/ node tools/music/fetch-playlist.mjs <歌单ID>`。
+- 播放器对 `src` 的处理：含 `://` 的当完整 URL 用，否则按站内路径补上当前源（此前自托管阶段用相对路径，这条兼容逻辑保留，将来想换回自托管也不用改代码）。
+
+**备选：完全自托管**（不依赖任何第三方，也没有版权与限流风险）。把音频文件放进 `public/audio/`，歌单写成相对路径即可：
+
+```json
+{ "tracks": [{ "title": "曲目名", "artist": "歌手", "src": "/blog/audio/your-track.ogg" }] }
+```
+
+格式按浏览器兼容性排序：**`.ogg`（Vorbis）体积最优** > `.mp3` > `.m4a`。⚠️ 若要部署到 GitHub Pages，这些文件**必须提交进仓库**（Git Actions 从仓库构建），体积大时考虑 Git LFS。
+
+**版权提醒**：走 Meting 时音频由第三方直链提供，你不存储不转发；公开站点建议谨慎。
 
 ### 6.5 后端 API：为什么必须自建（已实测验证）
 
@@ -352,11 +391,13 @@ M4 已按三阶段方案的第一阶段实现：**播放器不依赖任何外部
    → **MetingJS 播放一首歌需要两级请求**，只通第一级 = 有列表但点不响。i-meto 恰好坏在第二级。
 2. 所以"公共 API 不可靠"不是猜测，**是已经实测到的事实**（两个公共实例里坏了一个）。
 
-**阶段策略（维持三阶段不变，但风险评级已下调）：**
+**阶段策略（三阶段，实际走向与计划略有出入）：**
 
-- **阶段一（M0–M4）**：不连网易云。用 `public/audio/*.mp3` 自托管音频 + 手写静态歌单 JSON，喂给 APlayer。**零外部依赖，播放器先跑通。**
-- **阶段二（M5）**：自建 Meting API，部署后把地址填进 `<meting-js api="...">`，切到网易云歌单。地址通过 `PUBLIC_METING_API` 环境变量注入，**不硬编码**，方便随时换。
+- **阶段一（M0–M4，已完成）**：不连网易云。自托管音频 + 静态歌单 JSON，喂给自研原生播放器。**零外部依赖，播放器先跑通。**
+- **阶段二（M5，已完成）**：**没有自建 Meting API**，而是直接接公共实例 `https://api.injahow.cn/meting/`（用户决策，见 6.5）。地址通过 `tools/music/fetch-playlist.mjs` 的 `METING_API` 环境变量注入，**不硬编码在页面里**，方便随时换成自建后端。
 - **阶段三（可选）**：若网易云接口因登录/加密变化而不可用，退回自托管音频，播放器架构不变。
+
+**一个已落地的偏差要记下来**：计划里写的是"接 APlayer/MetingJS"，**实际 M5 仍是自研原生播放器**，只把歌单数据源换成了 Meting。原因：M4 的原生播放器已经跑通且能与 `transition:persist` 完美配合，引入 APlayer 反而要重新解决它的 `destroy()` 与 Vue 实例跨页问题（见第 7 节）。
 
 **网易云 cookie 问题：已实测澄清（原"最大不确定性"解除一半）**
 
@@ -365,11 +406,11 @@ M4 已按三阶段方案的第一阶段实现：**播放器不依赖任何外部
 - `GET /api/song/detail?ids=[2755496359]` → **200**
 - 免费歌 `28391863`：`/song/media/outer/url?id=...mp3` → **302 → 真实 mp3**；`/api/song/enhance/player/url` → 返回带 `vuutv` token 的真实 URL
 
-**VIP 歌（`fee:1`）不行，且即便拿到也只有 30 秒：**
+**`fee:1` 的歌不行，即便拿到也只有 30 秒：**
 - `2755496359`：outer-url → **302 → `Location: http://music.163.com/404`**
 - `enhance/player/url` → `{"url":null,...,"code":-110,...,"fee":1}`
-- injahow 对该曲下发 302 → `audio/mpeg`，但**只有 481,115 字节**；解析 MPEG 帧 = MPEG1 Layer III **128 kbps @ 44100 Hz → 30.07 秒**，两首不同 VIP 歌字节数完全相同
-- → **运维铁律：歌单里只放免费歌。** VIP 曲不要放，放了就是 30 秒试听，或者直接报错。
+- injahow 对该曲下发 302 → `audio/mpeg`，但**只有 481,115 字节**；解析 MPEG 帧 = MPEG1 Layer III **128 kbps @ 44100 Hz → 30.07 秒**，两首不同 `fee:1` 歌字节数完全相同
+- → **运维铁律：按 `fee` 过滤，只放 `fee=0` 与 `fee=8`。** `fee=1` 的曲目放了就是 30 秒试听。`tools/music/fetch-playlist.mjs` 已自动完成这层过滤。
 
 **自建服务端选型（仅读 README，未部署）：**
 
@@ -409,12 +450,11 @@ const bgUrl = (await getImage({ src: bg, width: 1920, format: 'webp' })).src;
 - 顶栏：`position: sticky; top: 0`。**纯 CSS，零风险。**
 
 ### ② 音乐播放器
-见第 6 节。已实测落地的实现分两个阶段：
+见第 6 节。实现方式在 M4 与 M5 之间只换了数据源，播放器本体没变：
 
-**M4 现状（自托管，已实现并实测通过）**：`src/components/Player.astro` 是一套不依赖任何第三方库的原生播放器 —— 左下角固定 dock、播放/暂停、上一首/下一首、可点击与方向键控制的进度条、`m:ss` 计时、`localStorage` 记忆曲目与进度。歌单来自 `public/audio/playlist.json`。**此时完全不需要 APlayer/MetingJS。**
+**M4 落地、M5 沿用的实现**：`src/components/Player.astro` 是一套**不依赖任何第三方库的原生播放器** —— 左下角固定 dock、播放/暂停、上一首/下一首、可点击与方向键控制的进度条、`m:ss` 计时、`localStorage` 记忆曲目与进度。歌单来自 `public/audio/playlist.json`。
 
-**M5 阶段（接网易云歌单时才引入）**：届时才需要下面三个 CDN 资源，均已实测 **HTTP 200**：
-`aplayer@1/dist/APlayer.min.js`、`aplayer@1/dist/APlayer.min.css`、`meting@2/dist/Meting.min.js`。
+**M5 实测结论：APlayer/MetingJS 最终没有引入。** 计划里预留的三个 CDN 资源（`aplayer@1/dist/APlayer.min.js`、`aplayer@1/dist/APlayer.min.css`、`meting@2/dist/Meting.min.js`，当时均已实测 HTTP 200）只在规划阶段用到，最终没进代码。原因：原生播放器已与 `transition:persist` 完全兼容，而 APlayer 需要额外解决实例跨页问题（见下条）。将来若真要换成 APlayer，这三个地址仍可用。
 
 **两阶段共用的硬约束**：
 - 浏览器**禁止带声音自动播放**（必须等用户首次点击，浏览器策略，无解）→ 设计成"点击后播"。
@@ -537,12 +577,13 @@ npm run preview
 | **M1** | `content.config.ts` + 3 篇样例文章 + 列表页 + `[...id].astro` + RSS/sitemap | 本地能点能读，`/blog/rss.xml` 有内容 | ✅ 完成（提交 `3bacad2`） |
 | **M2** | `BaseLayout` + `Header` + `global.css` + 系统字体栈（放弃网络 CJK 字体） | 有个人风格的静态站 | ✅ 完成（提交 `85d8ef3`） |
 | **M3** | ★ `<ClientRouter />` + `transition:persist` + **真实 `<audio>` 实测** | **点导航音乐不断、进度不丢**；失败则切 localStorage 续播 | ✅ **实测通过**（见第 5 节，真实 Edge 154 三段导航） |
-| **M4** | 粒子 + 明暗切换（已提前完成）+ 播放器接自托管音频 | 移动端自动关闭特效 | ✅ 完成（见第 5 节 M4 实测；本地音频走自托管 OGG，M5 再切网易云） |
-| **M5** | 自建 Meting API（Cloudflare Workers）+ 切网易云歌单 | 歌单能加载、能播放 | ⬜ 待做 |
+| **M4** | 粒子 + 明暗切换（已提前完成）+ 播放器接自托管音频 | 移动端自动关闭特效 | ✅ 完成（见第 5 节 M4 实测） |
+| **M5** | 接入 Meting API + 网易云歌单 | 歌单能加载、能播放 | ✅ 完成（见第 5 节 M5 实测；公共 API 先行，自建后端待替换） |
 | **M6** | GitHub Actions 部署上 GitHub Pages | 线上可访问，内部链接无 404 | ⬜ 待做 |
 
 **M3 关键关卡已通过**：`transition:persist` 对 `<audio>` 实测有效，方案心脏成立。
 **M4 已通过**：真实 `<Player />` 组件跨页不断歌，且 UI 与控件在导航后依然可用。
+**M5 已通过**：真实网易云歌单经公共 Meting API 完整播放（实测时长 213.8s，网络层确认 `audio/mpeg` 206 流式响应），跨页不断歌仍然成立。
 
 ---
 
@@ -552,7 +593,7 @@ npm run preview
 |---|---|---|
 | `transition:persist` 对 `<audio>` 无官方示例 | 🟢 低（原🔴最高） | **M3 已实测通过**（真实 Edge，前进/后退/再前进三段均保持播放与进度） |
 | 公共 Meting API 不稳定 | 🟡 中（原🔴高） | **已实测**：i-meto 的 `type=url` 已坏、injahow 通。结论不变（自建），但已不是猜测 |
-| 歌单混入 VIP 歌 → 30 秒试听或直接失败 | 🟡 中（新增） | 运维铁律：歌单**只放免费歌**（实测 VIP 歌 `fee:1` 只有 481,115 字节 / 30.07 秒） |
+| 歌单混入试听曲 → 30 秒后中断 | 🟡 中（新增） | `tools/music/fetch-playlist.mjs` 自动按 `fee` 过滤，只保留 `fee=0`/`fee=8`（实测 `fee:1` 只有 481,115 字节 / 30.07 秒） |
 | 上游 2026 年已切 EAPI 协议，老旧自建端会突然失效 | 🟡 中（新增） | 自建时优先选已适配 EAPI 的项目（`Zxis233/meting-workers`） |
 | 网易云接口需登录 cookie | 🟢 低（原🔴高） | **已实测澄清**：免费歌全链路无需 cookie；只有 VIP 需要，而我们不放 VIP |
 | GitHub Pages 的 `base` 导致内部链接 404 | 🟡 中 | 统一用 `import.meta.env.BASE_URL` 拼链接 |
@@ -567,7 +608,7 @@ npm run preview
 
 ## 12. 待办 / 未核实项
 
-- [x] 网易云歌单接口在 2026 年是否仍需 cookie —— **已实测**：免费歌无需 cookie；VIP 歌（`fee:1`）做不到，且只有 30 秒试听
+- [x] 网易云歌单接口在 2026 年是否仍需 cookie —— **已实测**：免费歌无需 cookie；`fee:1` 的歌做不到，且只有 30 秒试听
 - [x] 公共 Meting API 连通性 —— **已实测**：`api.i-meto.com` 歌单通(200) / `type=url` 全 404；`api.injahow.cn/meting/` 两级全通
 - [x] MetingJS 字段契约 —— **已从 APlayer 源码实测确认** `name/title`、`artist/author`、`cover/pic` 互为兜底
 - [x] `<audio>` 能否被 `transition:persist` 跨页保留 —— **M3 已实测通过**：元素身份保持、`paused` 恒为 false、时间轴跨交换继续推进（前进/后退/再前进三段全过）
@@ -582,7 +623,8 @@ npm run preview
 
 ## 13. 变更记录
 
-- **v5（2026-10-02）**：**M4 完成**。新增 `src/components/Player.astro`（左下角固定播放器：播放/暂停、上一首/下一首、可点击与方向键可控的进度条、`m:ss` 计时、`localStorage` 记录曲目与进度续播）与 `src/components/effects/Particles.astro`（canvas 粒子连线背景，窄屏或 `prefers-reduced-motion` 时自动移除）；两者接入 `BaseLayout`，让每个页面都 SSR 渲染出持久容器。**修正一条关键实现约束**：persist 必须打在**整个 dock** 上而不是只打在 `<audio>` 上 —— 第一版只持久音频，导致导航后按钮/标题/进度条被新页替换且监听丢失、控件失效。第 5 节新增 M4 实测数据表与修正后的约束。占位音频用 `tools/gen-placeholder-audio.mjs` 合成 16-bit WAV 再转 OGG Vorbis（三首共 219.8 KB，比 WAV 小约 17 倍）；`public/audio/*.ogg|mp3|wav|flac|m4a` 已加入 `.gitignore`（真实音乐不进仓库）。为让 `z-index:-1` 的粒子画布可见，把 `--bg` 从 `body` 移到 `html` 并让 `body` 透明。里程碑表 M4 标记为完成。
+- **v6（2026-10-02）**：**M5 完成**。音乐源从自托管占位音频切到**真实网易云歌单**，经公共 Meting 实例 `https://api.injahow.cn/meting/`（用户决策：先跑通，自建后端留待替换）。新增 `tools/music/fetch-playlist.mjs`，用网易云播放列表接口取 `fee` 后过滤，生成 `public/audio/playlist.json`（89 首 → 33 首）。**APlayer/MetingJS 最终未引入**，仍是自研原生播放器。**确立一条纠正性规则**：能否完整播放由 `fee` 决定 —— `1` 只有 30 秒试听、`0` 与 `8` 完整，此前"免费歌/VIP 歌"的说法已全部改为按 `fee` 表述。第 5 节新增 M5 实测数据表（含网络层 `206 audio/mpeg` 证据与 213.8s 真实时长）。清理：删除 `_audit`（806 文件）、`tools/gen-placeholder-audio.mjs` 与三首占位 OGG；撤销 `.gitignore` 里的音频排除规则（`public/audio/` 现在只剩 11.7 KB 的 `playlist.json`）。
+- **v5（2026-10-02）**：**M4 完成**。新增 `src/components/Player.astro`（左下角固定播放器：播放/暂停、上一首/下一首、可点击与方向键可控的进度条、`m:ss` 计时、`localStorage` 记录曲目与进度续播）与 `src/components/effects/Particles.astro`（canvas 粒子连线背景，窄屏或 `prefers-reduced-motion` 时自动移除）；两者接入 `BaseLayout`，让每个页面都 SSR 渲染出持久容器。**修正一条关键实现约束**：persist 必须打在**整个 dock** 上而不是只打在 `<audio>` 上 —— 第一版只持久音频，导致导航后按钮/标题/进度条被新页替换且监听丢失、控件失效。第 5 节新增 M4 实测数据表与修正后的约束。占位音频用 `tools/gen-placeholder-audio.mjs` 合成 16-bit WAV 再转 OGG Vorbis（三首共 219.8 KB，比 WAV 小约 17 倍）。为让 `z-index:-1` 的粒子画布可见，把 `--bg` 从 `body` 移到 `html` 并让 `body` 透明。里程碑表 M4 标记为完成。
 - **v4（2026-10-02）**：**M3 关键关卡实测通过**。用真实 Edge 154（CDP 驱动、真实 `<audio>` 播放）验证 `transition:persist` 对音频有效：三段导航（前进/后退/再前进）元素身份、播放状态、时间轴全部保持。同时从 ClientRouter 打包产物反混淆出 persist 的确切实现（匹配 `data-astro-transition-persist`；优先 `moveBefore()` 原子移动；交换后非持久媒体会被重建），把第 5 节从"预测 + NOT VERIFIED"改为"已确认机制 + 实测数据"，风险表该条 🔴→🟢。M2 记录补全（字体决策、进度）。M0–M3 均已提交。
 - **v3（2026-10-02）**：确认 GitHub 用户名为 **emila58035**（`site: https://emila58035.github.io`、`base: '/blog'`）；把 Meting/网易云实测结果并入第 6.5 节并重估风险（cookie 风险 🔴→🟢、公共 API 风险 🔴→🟡）；新增"只放免费歌"与"上游已切 EAPI"两条运维结论。**开始实际搭建**：M0 脚手架已落地并构建通过。
 - **v2（2026-10-02）**：按 6 条批注修正 —— 移除评论功能（Giscus 从方案与依赖中删除）；托管从 Cloudflare Pages 改为 **GitHub Pages**（新增 `base` 配置与官方 workflow，新增 base 链接坑与规避办法）；音乐源改为**网易云歌单**并新增第 6 节原理说明；确认 MVP 特效范围；本文档落盘。
