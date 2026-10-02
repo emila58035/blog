@@ -2,271 +2,631 @@
   "source": "meting",
   "api": "https://api.injahow.cn/meting/",
   "server": "netease",
-  "playlistId": "60198",
+  "playlistId": "7572834094",
   "tracks": [
     {
-      "id": 3410257938,
-      "title": "Been By Now",
-      "artist": "Morgan Wallen",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3410257938",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3410257938",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3410257938"
+      "id": 30051849,
+      "title": "Over The Sky",
+      "artist": "黒石ひとみ",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=30051849",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=30051849",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=30051849"
     },
     {
-      "id": 3417783817,
-      "title": "BbY WOW",
-      "artist": "KAROL G / Judeline / Rusowsky",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3417783817",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3417783817",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3417783817"
+      "id": 816003,
+      "title": "ずっと Be with you",
+      "artist": "阿澄佳奈",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=816003",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=816003",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=816003"
     },
     {
-      "id": 3437602759,
-      "title": "Last Thing You Need (from GTAVI: The Album)",
-      "artist": "Morgan Wallen / Grand Theft Auto VI",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3437602759",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3437602759",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3437602759"
+      "id": 29129677,
+      "title": "Re:Call",
+      "artist": "霜月はるか",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=29129677",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=29129677",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=29129677"
     },
     {
-      "id": 3431361982,
-      "title": "Nicole Kidman",
-      "artist": "ADÉLA",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3431361982",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3431361982",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3431361982"
+      "id": 22805105,
+      "title": "Starboard",
+      "artist": "黒石ひとみ",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=22805105",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=22805105",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=22805105"
     },
     {
-      "id": 3407572576,
-      "title": "Dead Fresh",
-      "artist": "Lil Baby",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3407572576",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3407572576",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3407572576"
+      "id": 692641,
+      "title": "親愛なる世界へ",
+      "artist": "Ceui",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=692641",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=692641",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=692641"
     },
     {
-      "id": 3410182388,
-      "title": "Ain't In LA",
-      "artist": "ADÉLA",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3410182388",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3410182388",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3410182388"
+      "id": 22816107,
+      "title": "幻影の君 (“朝风のとびら”より)",
+      "artist": "蒼咲雫",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=22816107",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=22816107",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=22816107"
     },
     {
-      "id": 3410454149,
-      "title": "Animal",
-      "artist": "KATSEYE",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3410454149",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3410454149",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3410454149"
+      "id": 29193034,
+      "title": "花ひらく蒼天",
+      "artist": "霜月はるか",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=29193034",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=29193034",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=29193034"
     },
     {
-      "id": 3406368630,
-      "title": "oh yeah?",
-      "artist": "Steve Lacy",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3406368630",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3406368630",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3406368630"
+      "id": 523658393,
+      "title": "fortissimo-the ultimate crisis- (Game size)",
+      "artist": "fripSide",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=523658393",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=523658393",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=523658393"
     },
     {
-      "id": 3414177846,
-      "title": "AH HA",
-      "artist": "Cardi B",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3414177846",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3414177846",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3414177846"
+      "id": 4925681,
+      "title": "桜乃 -City of fairy tale-",
+      "artist": "冨田敦",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=4925681",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=4925681",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=4925681"
     },
     {
-      "id": 3350783498,
-      "title": "Self Aware",
-      "artist": "Temper City",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3350783498",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3350783498",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3350783498"
+      "id": 28700043,
+      "title": "永遠を願うとき",
+      "artist": "松本文紀",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=28700043",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=28700043",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=28700043"
     },
     {
-      "id": 3435030577,
-      "title": "So Good",
-      "artist": "Jhené Aiko / Kendrick Lamar",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3435030577",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3435030577",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3435030577"
+      "id": 399367389,
+      "title": "天球の下の奇蹟",
+      "artist": "はな",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=399367389",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=399367389",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=399367389"
     },
     {
-      "id": 27231858,
-      "title": "September",
-      "artist": "Earth, Wind & Fire",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=27231858",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=27231858",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=27231858"
+      "id": 630884,
+      "title": "空種",
+      "artist": "南條愛乃",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=630884",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=630884",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=630884"
     },
     {
-      "id": 3401632008,
-      "title": "MORNING DEW (DONK)",
-      "artist": "Beyoncé",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3401632008",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3401632008",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3401632008"
+      "id": 630887,
+      "title": "Asphodelus",
+      "artist": "南條愛乃",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=630887",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=630887",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=630887"
     },
     {
-      "id": 3414273113,
-      "title": "petal",
-      "artist": "Ariana Grande",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3414273113",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3414273113",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3414273113"
+      "id": 767112,
+      "title": "君と私と穏やかな旅",
+      "artist": "回路",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=767112",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=767112",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=767112"
     },
     {
-      "id": 3382115200,
-      "title": "Hit the Wall",
-      "artist": "Gracie Abrams",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3382115200",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3382115200",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3382115200"
+      "id": 533223,
+      "title": "Cras numquam scire (TV-Size)",
+      "artist": "Yucca",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=533223",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=533223",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=533223"
     },
     {
-      "id": 2698995270,
-      "title": "Kid Myself",
-      "artist": "John Morgan",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=2698995270",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=2698995270",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=2698995270"
+      "id": 26450054,
+      "title": "雪の羽 時の風",
+      "artist": "Barbarian On The Groove / 茶太",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=26450054",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=26450054",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=26450054"
     },
     {
-      "id": 3389668517,
-      "title": "Cowgirl",
-      "artist": "Shaboozey",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3389668517",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3389668517",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3389668517"
+      "id": 2750034058,
+      "title": "To Your Oblivion",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=2750034058",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=2750034058",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=2750034058"
     },
     {
-      "id": 3391400902,
-      "title": "Ghetto Love Story",
-      "artist": "BabyChiefDoit",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3391400902",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3391400902",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3391400902"
+      "id": 1884752394,
+      "title": "There Is a Reason",
+      "artist": "Suzuki Konomi",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=1884752394",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=1884752394",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=1884752394"
     },
     {
-      "id": 3437786630,
-      "title": "That's Just Me",
-      "artist": "Riley Green",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3437786630",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3437786630",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3437786630"
+      "id": 33579508,
+      "title": "you 【ボーナストラック】",
+      "artist": "V.A.",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=33579508",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=33579508",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=33579508"
     },
     {
-      "id": 3416678381,
-      "title": "onsra",
-      "artist": "comehelpglo",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3416678381",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3416678381",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3416678381"
+      "id": 29418295,
+      "title": "Fable",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=29418295",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=29418295",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=29418295"
     },
     {
-      "id": 2725806003,
-      "title": "South Of Sanity",
-      "artist": "Zach Top",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=2725806003",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=2725806003",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=2725806003"
+      "id": 29418289,
+      "title": "Friction",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=29418289",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=29418289",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=29418289"
     },
     {
-      "id": 3437780436,
-      "title": "Country And She Knows It",
-      "artist": "Luke Bryan",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3437780436",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3437780436",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3437780436"
+      "id": 554242868,
+      "title": "Extension of You",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=554242868",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=554242868",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=554242868"
     },
     {
-      "id": 3416345399,
-      "title": "Stop The Wedding!",
-      "artist": "Ashe",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3416345399",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3416345399",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3416345399"
+      "id": 2046257098,
+      "title": "Gunners in the Rain",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=2046257098",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=2046257098",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=2046257098"
     },
     {
-      "id": 3436512698,
-      "title": "Joseph",
-      "artist": "Falling In Reverse / Corey Taylor / Serj Tankian",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3436512698",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3436512698",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3436512698"
+      "id": 2707332868,
+      "title": "TIAN TIAN",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=2707332868",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=2707332868",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=2707332868"
     },
     {
-      "id": 3437602952,
-      "title": "RHYNO (from GTAVI: The Album)",
-      "artist": "Travis Scott / Grand Theft Auto VI",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3437602952",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3437602952",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3437602952"
+      "id": 1850441824,
+      "title": "Harmonious",
+      "artist": "Binary Haze Interactive / Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=1850441824",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=1850441824",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=1850441824"
     },
     {
-      "id": 3417782579,
-      "title": "Ahí",
-      "artist": "KAROL G / Drake",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3417782579",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3417782579",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3417782579"
+      "id": 26131738,
+      "title": "闇の彼方へ",
+      "artist": "水谷瑠奈",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=26131738",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=26131738",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=26131738"
     },
     {
-      "id": 3435031280,
-      "title": "He Belongs",
-      "artist": "Jhené Aiko",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3435031280",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3435031280",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3435031280"
+      "id": 1887467091,
+      "title": "Poems of a Machine",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=1887467091",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=1887467091",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=1887467091"
     },
     {
-      "id": 3417782581,
-      "title": "Still",
-      "artist": "KAROL G / Bruno Mars",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3417782581",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3417782581",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3417782581"
+      "id": 2130451215,
+      "title": "Duetting Solo(哥布林殺手 Another Adventurer: Nightmare Feast)",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=2130451215",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=2130451215",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=2130451215"
     },
     {
-      "id": 3437788712,
-      "title": "Babydoll",
-      "artist": "Jamie Miller / Antonio Cipriano",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3437788712",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3437788712",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3437788712"
+      "id": 2154644185,
+      "title": "Through Patches of Violet",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=2154644185",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=2154644185",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=2154644185"
     },
     {
-      "id": 3406367777,
-      "title": "nothing",
-      "artist": "Steve Lacy",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3406367777",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3406367777",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3406367777"
+      "id": 2148397627,
+      "title": "Grown-up's Paradise",
+      "artist": "Mili / 塞壬唱片-MSR",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=2148397627",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=2148397627",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=2148397627"
     },
     {
-      "id": 3427503992,
-      "title": "Dope Girl",
-      "artist": "Rod Wave",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3427503992",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3427503992",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3427503992"
+      "id": 2117884990,
+      "title": "月虹蝶",
+      "artist": "NEEDY GIRL OVERDOSE / KOTOKO / Aiobahn +81",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=2117884990",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=2117884990",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=2117884990"
     },
     {
-      "id": 3435031278,
-      "title": "Ghost",
-      "artist": "Jhené Aiko",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3435031278",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3435031278",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3435031278"
+      "id": 2108548014,
+      "title": "Compass",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=2108548014",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=2108548014",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=2108548014"
     },
     {
-      "id": 3441767010,
-      "title": "Let's Get Married (Club Mix)",
-      "artist": "CHROMA / Miley Cyrus",
-      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3441767010",
-      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3441767010",
-      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3441767010"
+      "id": 435278012,
+      "title": "Sl0t",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=435278012",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=435278012",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=435278012"
+    },
+    {
+      "id": 2029212574,
+      "title": "INTERNET YAMERO",
+      "artist": "NEEDY GIRL OVERDOSE / KOTOKO / Aiobahn +81",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=2029212574",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=2029212574",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=2029212574"
+    },
+    {
+      "id": 29418287,
+      "title": "Nine Point Eight",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=29418287",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=29418287",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=29418287"
+    },
+    {
+      "id": 435166261,
+      "title": "Vulnerability",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=435166261",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=435166261",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=435166261"
+    },
+    {
+      "id": 29724134,
+      "title": "空気力学少女と少年の詩",
+      "artist": "はな",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=29724134",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=29724134",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=29724134"
+    },
+    {
+      "id": 2058124989,
+      "title": "Fly, My Wings",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=2058124989",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=2058124989",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=2058124989"
+    },
+    {
+      "id": 2021507996,
+      "title": "Between Two Worlds",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=2021507996",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=2021507996",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=2021507996"
+    },
+    {
+      "id": 1999271522,
+      "title": "Dancing Ghost's Ball Jointed Darling",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=1999271522",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=1999271522",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=1999271522"
+    },
+    {
+      "id": 665309,
+      "title": "魔女狩り",
+      "artist": "浮森かや子",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=665309",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=665309",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=665309"
+    },
+    {
+      "id": 665246,
+      "title": "黒子鸟",
+      "artist": "浮森かや子",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=665246",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=665246",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=665246"
+    },
+    {
+      "id": 399367387,
+      "title": "櫻ノ詩",
+      "artist": "はな",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=399367387",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=399367387",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=399367387"
+    },
+    {
+      "id": 4937391,
+      "title": "Tractatus Logico-philosophicus",
+      "artist": "松本文紀",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=4937391",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=4937391",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=4937391"
+    },
+    {
+      "id": 4937357,
+      "title": "夜の向日葵",
+      "artist": "松本文紀",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=4937357",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=4937357",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=4937357"
+    },
+    {
+      "id": 435005007,
+      "title": "Meatball Submarine",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=435005007",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=435005007",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=435005007"
+    },
+    {
+      "id": 554241864,
+      "title": "Mushrooms",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=554241864",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=554241864",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=554241864"
+    },
+    {
+      "id": 1825050896,
+      "title": "Victim",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=1825050896",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=1825050896",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=1825050896"
+    },
+    {
+      "id": 1887467090,
+      "title": "Gone Angels",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=1887467090",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=1887467090",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=1887467090"
+    },
+    {
+      "id": 1887467088,
+      "title": "Iron Lotus",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=1887467088",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=1887467088",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=1887467088"
+    },
+    {
+      "id": 1900488879,
+      "title": "In Hell We Live, Lament (feat. KIHOW)",
+      "artist": "Mili / KIHOW",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=1900488879",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=1900488879",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=1900488879"
+    },
+    {
+      "id": 29418299,
+      "title": "Witch's Invitation",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=29418299",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=29418299",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=29418299"
+    },
+    {
+      "id": 1907325751,
+      "title": "Dandelion Girls, Dandelion Boys",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=1907325751",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=1907325751",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=1907325751"
+    },
+    {
+      "id": 1907322090,
+      "title": "Bento Box Bivouac",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=1907322090",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=1907322090",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=1907322090"
+    },
+    {
+      "id": 1849687368,
+      "title": "Bulbel",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=1849687368",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=1849687368",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=1849687368"
+    },
+    {
+      "id": 435005009,
+      "title": "Cerebrite",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=435005009",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=435005009",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=435005009"
+    },
+    {
+      "id": 29418294,
+      "title": "Imagined Flight",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=29418294",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=29418294",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=29418294"
+    },
+    {
+      "id": 480097788,
+      "title": "Excαlibur",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=480097788",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=480097788",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=480097788"
+    },
+    {
+      "id": 31654691,
+      "title": "Space Colony",
+      "artist": "H△G / Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=31654691",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=31654691",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=31654691"
+    },
+    {
+      "id": 554242867,
+      "title": "Camelia",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=554242867",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=554242867",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=554242867"
+    },
+    {
+      "id": 435005005,
+      "title": "Red Dahlia",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=435005005",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=435005005",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=435005005"
+    },
+    {
+      "id": 554245892,
+      "title": "奶水",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=554245892",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=554245892",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=554245892"
+    },
+    {
+      "id": 435005008,
+      "title": "与我共鳴 -NENTEN-",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=435005008",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=435005008",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=435005008"
+    },
+    {
+      "id": 554245889,
+      "title": "Summoning 101",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=554245889",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=554245889",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=554245889"
+    },
+    {
+      "id": 435166260,
+      "title": "Unidentified Flavourful Object",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=435166260",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=435166260",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=435166260"
+    },
+    {
+      "id": 28921696,
+      "title": "星見る頃を過ぎても -Canon and Gigue in Plectrum Remix-",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=28921696",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=28921696",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=28921696"
+    },
+    {
+      "id": 411214221,
+      "title": "Bathtub Mermaid",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=411214221",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=411214221",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=411214221"
+    },
+    {
+      "id": 29418286,
+      "title": "A Turtle's Heart",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=29418286",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=29418286",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=29418286"
+    },
+    {
+      "id": 28921695,
+      "title": "Nine Point Eight",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=28921695",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=28921695",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=28921695"
+    },
+    {
+      "id": 480097786,
+      "title": "幾年月",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=480097786",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=480097786",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=480097786"
+    },
+    {
+      "id": 31654694,
+      "title": "Colorful",
+      "artist": "H△G / Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=31654694",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=31654694",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=31654694"
+    },
+    {
+      "id": 29418291,
+      "title": "YUBIKIRI-GENMAN",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=29418291",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=29418291",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=29418291"
+    },
+    {
+      "id": 554245890,
+      "title": "Lemonade",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=554245890",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=554245890",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=554245890"
+    },
+    {
+      "id": 406347064,
+      "title": "Ga1ahad and Scientific Witchery",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=406347064",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=406347064",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=406347064"
+    },
+    {
+      "id": 435166264,
+      "title": "Utopiosphere -Platonism-",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=435166264",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=435166264",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=435166264"
+    },
+    {
+      "id": 554245891,
+      "title": "Vitamins",
+      "artist": "Mili / world's end girlfriend",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=554245891",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=554245891",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=554245891"
+    },
+    {
+      "id": 435005006,
+      "title": "RTRT",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=435005006",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=435005006",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=435005006"
+    },
+    {
+      "id": 29418292,
+      "title": "Sacramentum:Unaccompanied Hymn for Torino",
+      "artist": "Mili",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=29418292",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=29418292",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=29418292"
     }
   ]
 }
