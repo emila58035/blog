@@ -1,6 +1,7 @@
 # 个人博客 · Astro 7 实施方案
 
-- 方案版本：v7（2026-10-02），已按 6 条批注修正；**M0–M6 全部落地**，M3/M4/M5 均经真实浏览器实测通过
+- 方案版本：v8（2026-10-02），已按 6 条批注修正；**M0–M6 全部完成，站点已上线并验收**
+- 线上地址：**<https://emila58035.github.io/blog/>**
 - 目标目录：`D:\Emila_58035\blog`
 - 部署：**GitHub Pages**（用户指定）
 - 范围：**不做评论功能**
@@ -511,13 +512,32 @@ export default defineConfig({
 
 ## 9. GitHub Pages 部署
 
+**✅ 已上线**：<https://emila58035.github.io/blog/>（仓库 `https://github.com/emila58035/blog`，public）
+
 **已确认的账号信息（用户批注）**：GitHub 用户名 **emila58035**。
 
 因此配置为：
 - `site: 'https://emila58035.github.io'`
 - `base: '/blog'` —— 适用于**仓库名为 `blog`** 的情况，线上地址 `https://emila58035.github.io/blog/`
-- ⚠️ 如果你新建的仓库名是 `emila58035.github.io`，则必须**删掉 `base`**（详见下方规则）
+- ⚠️ 如果仓库名是 `emila58035.github.io`，则必须**删掉 `base`**（详见下方规则）
 - 本地预览地址也会是 `http://localhost:4321/blog/`
+
+**★ 上线验收结果（2026-10-02，对线上站点的实测，非本地）**
+
+| 检查项 | 结果 |
+|---|---|
+| 13 个页面/资源（含 RSS、sitemap、playlist.json、4 个标签页） | ✅ 全部 200，字节数与本地 `dist/` 完全一致 |
+| 两个静态资源 `_astro/BaseLayout.*.css`（9886 B）与 `_astro/ClientRouter.*.js`（16357 B） | ✅ 200 |
+| `favicon.svg` | ✅ 解析为 `/blog/favicon.svg`，fetch 200 |
+| sitemap 各 `<loc>` | ✅ 全部带 `/blog/` 前缀 |
+| 播放器歌单 | ✅ 33 首，`src` 走 Meting 直链 |
+| 真实时长 | ✅ 213.8s（证明不是 30 秒试听片段） |
+| 播放网络层 | ✅ `m801.music.126.net` `206` `audio/mpeg` |
+| 客户端导航后：元素身份 / 时间轴 / 播放状态 / 标题 / 深色主题 | ✅ 五项全部保持 |
+| 整页刷新后主题与播放器 | ✅ 主题恢复为深色，`data-playlist="/blog/audio/playlist.json"` |
+| HTTP 错误 / 控制台报错 | ✅ 0 / 0 |
+
+**首次部署需要的一次性网页设置已完成**：仓库 Settings → Pages → Source 选 "GitHub Actions"。漏设的症状是 workflow 在 deploy 阶段报 `Get Pages site failed`，补设后 re-run 即可。工作流已配 `workflow_dispatch`，可手动触发。
 
 **`.github/workflows/deploy.yml`**（取自官方文档原文，含最新 action 版本）：
 
@@ -580,12 +600,12 @@ npm run preview
 | **M3** | ★ `<ClientRouter />` + `transition:persist` + **真实 `<audio>` 实测** | **点导航音乐不断、进度不丢**；失败则切 localStorage 续播 | ✅ **实测通过**（见第 5 节，真实 Edge 154 三段导航） |
 | **M4** | 粒子 + 明暗切换（已提前完成）+ 播放器接自托管音频 | 移动端自动关闭特效 | ✅ 完成（见第 5 节 M4 实测） |
 | **M5** | 接入 Meting API + 网易云歌单 | 歌单能加载、能播放 | ✅ 完成（见第 5 节 M5 实测；公共 API 先行，自建后端待替换） |
-| **M6** | GitHub Actions 部署上 GitHub Pages | 线上可访问，内部链接无 404 | ✅ 完成（workflow + README 已就位，首次部署需在仓库 Settings → Pages 选 "GitHub Actions"） |
+| **M6** | GitHub Actions 部署上 GitHub Pages | 线上可访问，内部链接无 404 | ✅ **已上线并验收**，见第 9 节 |
 
 **M3 关键关卡已通过**：`transition:persist` 对 `<audio>` 实测有效，方案心脏成立。
 **M4 已通过**：真实 `<Player />` 组件跨页不断歌，且 UI 与控件在导航后依然可用。
 **M5 已通过**：真实网易云歌单经公共 Meting API 完整播放（实测时长 213.8s，网络层确认 `audio/mpeg` 206 流式响应），跨页不断歌仍然成立。
-**M6 已就位**：`.github/workflows/deploy.yml` 用官方推荐的 `actions/checkout@v7` + `withastro/action@v6` + `actions/deploy-pages@v5`（三个 tag 均经 `api.github.com/repos/.../releases/latest` 实测确认：v7.0.1 / v6.1.3 / v5.0.1）；`node-version: 24` 与本机一致；lockfile 已入库。构建期内审计了 10 个页面产物的**全部** `href`/`src` 值，修掉了两处 `base` 相关缺陷（见第 13 节 v7）。**剩下一步只能在网页上做**：仓库 Settings → Pages → Source 选 "GitHub Actions"，之后推送即自动部署。
+**M6 已完成并上线**：`.github/workflows/deploy.yml` 用官方推荐的 `actions/checkout@v7` + `withastro/action@v6` + `actions/deploy-pages@v5`（三个 tag 均经 GitHub releases API 实测确认：v7.0.1 / v6.1.3 / v5.0.1）；`node-version: 24` 与本机一致；lockfile 已入库。用户已推送 `main` 并在仓库 Settings → Pages 选好 "GitHub Actions"，站点在 <https://emila58035.github.io/blog/> 上线，13 个页面与全部资源实测 200，本地 `HEAD` 与 `origin/main` 同为 `15f14df`。**对线上站点**复跑了完整验收（base 前缀、favicon、跨页不断歌、主题不闪、无 404/报错），全部通过。
 
 ---
 
@@ -625,6 +645,7 @@ npm run preview
 
 ## 13. 变更记录
 
+- **v8（2026-10-02）**：**站点已上线**。用户推送 `main` 并完成 Settings → Pages 设置后，站点在 <https://emila58035.github.io/blog/> 可用。**对线上站点**（不只是本地产物）复跑完整验收：13 个页面/资源全部 200 且字节数与本地 `dist/` 一致、favicon 走 base 前缀、播放器 33 首 / 真实时长 213.8s / 206 `audio/mpeg`、客户端导航后元素身份·时间轴·播放状态·标题·深色主题五项全保持、刷新后主题与播放器正常、0 个 HTTP 错误与 0 条控制台报错。第 9 节新增线上验收数据表；README 新增「日常更新」一节（改完内容只需 `git add`/`commit`/`push`，CI 自动构建，不必手动构建或上传 `dist/`）。
 - **v7（2026-10-02）**：**M6 完成**。新增 `.github/workflows/deploy.yml`（`actions/checkout@v7` + `withastro/action@v6` + `actions/deploy-pages@v5`，权限 `contents: read`/`pages: write`/`id-token: write`，`node-version: 24`；YAML 已用 Python `yaml.safe_load` 校验结构与解析结果）。新增 `README.md`（给未来的自己：本地命令、写文格式、换歌单、部署前置设置、两条 persist 硬约束、降级行为、已知风险）。**构建期审计 10 个页面产物的全部 `href`/`src` 值，修掉两处 `base` 缺陷**：① `<link rel="icon" href="/favicon.svg">` 没走 `href()`，线上会 404 → 改为 `href={href('favicon.svg')}`；② 主题恢复脚本原本只在 SSR 首屏执行，客户端导航到新文档时 `<html>` 尚无 `data-theme`，会闪一下默认主题 → 改用 `astro:before-swap` 把主题同步到 `event.newDocument.documentElement`（已从 ClientRouter 产物确认该属性存在且可写，并已移除不再需要的 `data-astro-rerun`）。
 - **v6（2026-10-02）**：**M5 完成**。音乐源从自托管占位音频切到**真实网易云歌单**，经公共 Meting 实例 `https://api.injahow.cn/meting/`（用户决策：先跑通，自建后端留待替换）。新增 `tools/music/fetch-playlist.mjs`，用网易云播放列表接口取 `fee` 后过滤，生成 `public/audio/playlist.json`（89 首 → 33 首）。**APlayer/MetingJS 最终未引入**，仍是自研原生播放器。**确立一条纠正性规则**：能否完整播放由 `fee` 决定 —— `1` 只有 30 秒试听、`0` 与 `8` 完整，此前"免费歌/VIP 歌"的说法已全部改为按 `fee` 表述。第 5 节新增 M5 实测数据表（含网络层 `206 audio/mpeg` 证据与 213.8s 真实时长）。清理：删除 `_audit`（806 文件）、`tools/gen-placeholder-audio.mjs` 与三首占位 OGG；撤销 `.gitignore` 里的音频排除规则（`public/audio/` 现在只剩 11.7 KB 的 `playlist.json`）。
 - **v5（2026-10-02）**：**M4 完成**。新增 `src/components/Player.astro`（左下角固定播放器：播放/暂停、上一首/下一首、可点击与方向键可控的进度条、`m:ss` 计时、`localStorage` 记录曲目与进度续播）与 `src/components/effects/Particles.astro`（canvas 粒子连线背景，窄屏或 `prefers-reduced-motion` 时自动移除）；两者接入 `BaseLayout`，让每个页面都 SSR 渲染出持久容器。**修正一条关键实现约束**：persist 必须打在**整个 dock** 上而不是只打在 `<audio>` 上 —— 第一版只持久音频，导致导航后按钮/标题/进度条被新页替换且监听丢失、控件失效。第 5 节新增 M4 实测数据表与修正后的约束。占位音频用 `tools/gen-placeholder-audio.mjs` 合成 16-bit WAV 再转 OGG Vorbis（三首共 219.8 KB，比 WAV 小约 17 倍）。为让 `z-index:-1` 的粒子画布可见，把 `--bg` 从 `body` 移到 `html` 并让 `body` 透明。里程碑表 M4 标记为完成。

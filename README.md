@@ -2,9 +2,22 @@
 
 基于 **Astro 7** 的静态个人博客。无评论、无后端、无 UI 框架 —— 访客端默认零 JavaScript（播放器与粒子特效是仅有的两处客户端脚本）。
 
-线上地址：<https://emila58035.github.io/blog/>
+线上地址：<https://emila58035.github.io/blog/> —— 已上线并验收通过（见下方「部署」）。
 
 方案与决策记录见 [PLAN.md](./PLAN.md)。
+
+## 日常更新
+
+改完内容或代码，两条命令就够：
+
+```bash
+git add -A && git commit -m "你的提交信息"
+git push
+```
+
+推送到 `main` 后 GitHub Actions 会自动构建部署，约 1 分钟。**不需要手动构建或上传 `dist/`**。进度看 <https://github.com/emila58035/blog/actions>。
+
+本地想先看一眼效果再推，用 `npm run dev`（<http://localhost:4321/blog/>）。
 
 ## 技术栈
 
@@ -78,7 +91,9 @@ METING_API=https://你的地址/ node tools/music/fetch-playlist.mjs 60198
 
 推送到 `main` 分支即自动部署，工作流在 [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml)。
 
-**首次部署前需要在仓库里做一次设置**：Settings → Pages → Source 选择 **"GitHub Actions"**。这一步只能在网页上点，工作流本身无法代劳。
+**首次部署的一次性设置已完成**：Settings → Pages → Source 需选 **"GitHub Actions"**（默认是 "Deploy from a branch"）。这一步只能在网页上点，工作流本身无法代劳；漏设的症状是 workflow 在 deploy 阶段报 `Get Pages site failed`，补设后 re-run 即可。
+
+**上线验收结果**（2026-10-02，真实 Edge 154 对**线上站点**实测）：13 个页面与全部静态资源均 200，`favicon.svg` 解析为 `/blog/favicon.svg`；播放器加载 33 首、真实时长 213.8s、播放走 `m801.music.126.net` 的 206 `audio/mpeg`；客户端导航后播放器元素身份保持、时间轴继续推进、保持播放、标题不变，深色主题不闪；整页刷新后主题仍被恢复。无 HTTP 错误、无控制台报错。
 
 几个已经踩过或需要留意的点：
 
