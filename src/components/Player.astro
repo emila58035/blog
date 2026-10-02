@@ -1,0 +1,402 @@
+---
+// 音乐播放器（左下角固定 dock）
+//
+// 跨页不断歌的原理（M3 已在真实 Edge 实测确认，见 PLAN.md 第 5 节）：
+//   <ClientRouter /> 交换 body 时会把带 data-astro-transition-persist 的元素
+//   原子移动到新文档。持久化必须打在**整个 dock** 上而不是只打在 <audio> 上：
+//   只持久 <audio> 的话，按钮和进度条会被新页面的版本替换掉，而这些新节点上
+//   没有事件监听（下面的守卫又阻止了重复绑定），控件就会失效。
+//   持久整个 dock，DOM 节点与其监听器一起被搬运，状态与交互都不会丢。
+//   两个页面的服务端 HTML 都必须渲染出这个元素，因此它放在 BaseLayout 里。
+//
+// 脚本用 dock.dataset.ready 守卫只初始化一次：导航后脚本会再次执行，
+//   而 dock 还是同一个节点，重复绑定会让每次点击触发多次。
+import { href } from '../utils/url';
+---
+
+<div
+  class="player-dock"
+  data-player
+  data-playlist={href('audio/playlist.json')}
+  transition:persist="player"
+  aria-label="音乐播放器"
+>
+  <audio data-player-audio preload="metadata"></audio>
+
+  <button class="player-btn" type="button" data-player-toggle aria-label="播放或暂停">
+    <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 5.14v13.72L19 12z" fill="currentColor"></path>
+    </svg>
+    <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"></path>
+    </svg>
+  </button>
+
+  <div class="player-body">
+    <div class="player-text">
+      <span class="player-title" data-player-title>载入中…</span>
+      <span class="player-artist" data-player-artist></span>
+    </div>
+    <div class="player-progress" data-player-progress role="slider" aria-label="播放进度" tabindex="0">
+      <div class="player-progress-fill" data-player-fill></div>
+    </div>
+  </div>
+
+  <div class="player-right">
+    <span class="player-time" data-player-time>0:00</span>
+    <button class="player-btn player-btn-sm" type="button" data-player-prev aria-label="上一首">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7 6h2v12H7zM19 6v12l-9-6z" fill="currentColor"></path>
+      </svg>
+    </button>
+    <button class="player-btn player-btn-sm" type="button" data-player-next aria-label="下一首">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M15 6h2v12h-2zM5 6v12l9-6z" fill="currentColor"></path>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+  const PLAYER_KEY = 'player.state';
+  const audio = document.querySelector<HTMLAudioElement>('[data-player-audio]');
+  const dock = document.querySelector<HTMLElement>('[data-player]');
+
+  // 只在首次页面加载初始化；导航后 dock 是同一个持久节点，跳过即可
+  if (audio && dock && !dock.dataset.ready) {
+    dock.dataset.ready = '1';
+
+    const titleEl = dock.querySelector<HTMLElement>('[data-player-title]')!;
+    const artistEl = dock.querySelector<HTMLElement>('[data-player-artist]')!;
+    const timeEl = dock.querySelector<HTMLElement>('[data-player-time]')!;
+    const fillEl = dock.querySelector<HTMLElement>('[data-player-fill]')!;
+    const barEl = dock.querySelector<HTMLElement>('[data-player-progress]')!;
+    const toggleBtn = dock.querySelector<HTMLButtonElement>('[data-player-toggle]')!;
+
+    interface SavedState {
+      index: number;
+      time: number;
+      playing: boolean;
+    }
+
+    const readState = (): SavedState => {
+      try {
+        const raw = localStorage.getItem(PLAYER_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Partial<SavedState>;
+          if (typeof parsed.index === 'number') {
+            return {
+              index: parsed.index,
+              time: typeof parsed.time === 'number' ? parsed.time : 0,
+              playing: parsed.playing === true,
+            };
+          }
+        }
+      } catch {
+        /* 读不到就用默认值 */
+      }
+      return { index: 0, time: 0, playing: false };
+    };
+
+    const writeState = () => {
+      try {
+        localStorage.setItem(
+          PLAYER_KEY,
+          JSON.stringify({
+            index: state.index,
+            time: audio.currentTime,
+            playing: !audio.paused,
+          })
+        );
+      } catch {
+        /* localStorage 不可用（隐私模式）时忽略 */
+      }
+    };
+
+    const state = readState();
+
+    const formatTime = (sec: number) => {
+      if (!Number.isFinite(sec) || sec < 0) return '0:00';
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m}:${String(s).padStart(2, '0')}`;
+    };
+
+    const paint = () => {
+      const dur = audio.duration;
+      const pct = Number.isFinite(dur) && dur > 0 ? (audio.currentTime / dur) * 100 : 0;
+      fillEl.style.width = `${pct}%`;
+      timeEl.textContent = formatTime(audio.currentTime);
+      toggleBtn.dataset.playing = audio.paused ? 'false' : 'true';
+    };
+
+    const play = () => {
+      audio.play().catch(() => {
+        // 被自动播放策略拦下时不要留一个假的播放态
+        toggleBtn.dataset.playing = 'false';
+      });
+    };
+
+    const load = async (index: number, seekTo = 0, autoplay = false) => {
+      const res = await fetch(dock.dataset.playlist!);
+      const data = (await res.json()) as {
+        tracks: { title: string; artist?: string; src: string }[];
+      };
+      const tracks = data.tracks;
+      if (tracks.length === 0) return;
+
+      state.index = ((index % tracks.length) + tracks.length) % tracks.length;
+      const track = tracks[state.index];
+
+      audio.src = track.src;
+      titleEl.textContent = track.title;
+      artistEl.textContent = track.artist ?? '';
+      dock.dataset.count = String(tracks.length);
+
+      if (seekTo > 0) {
+        audio.currentTime = seekTo;
+      }
+      if (autoplay) play();
+      paint();
+    };
+
+    /**
+     * 先只设 src 并加载元数据，拿到持久化的进度后再 seek。
+     * 直接在 metadata 之前写 currentTime 会被浏览器丢弃。
+     */
+    const restore = async (index: number, time: number, autoplay: boolean) => {
+      const res = await fetch(dock.dataset.playlist!);
+      const data = (await res.json()) as {
+        tracks: { title: string; artist?: string; src: string }[];
+      };
+      const tracks = data.tracks;
+      if (tracks.length === 0) return;
+
+      state.index = ((index % tracks.length) + tracks.length) % tracks.length;
+      const track = tracks[state.index];
+      dock.dataset.count = String(tracks.length);
+      audio.src = track.src;
+      titleEl.textContent = track.title;
+      artistEl.textContent = track.artist ?? '';
+
+      if (time > 0) {
+        await new Promise<void>((resolve) => {
+          if (audio.readyState >= 1) return resolve();
+          audio.addEventListener('loadedmetadata', () => resolve(), { once: true });
+        });
+        try {
+          audio.currentTime = Math.min(time, audio.duration || time);
+        } catch {
+          /* 元数据异常时从 0 开始 */
+        }
+      }
+
+      if (autoplay) play();
+      paint();
+    };
+
+    const step = (delta: number) => {
+      const count = Number(dock.dataset.count) || 1;
+      const next = (((state.index + delta) % count) + count) % count;
+      if (audio.src) {
+        audio.pause();
+        void load(next, 0, true);
+      }
+    };
+
+    toggleBtn.addEventListener('click', () => {
+      if (!audio.src) {
+        void load(state.index, 0, true);
+        return;
+      }
+      if (audio.paused) play();
+      else audio.pause();
+    });
+
+    dock.querySelector('[data-player-next]')!.addEventListener('click', () => step(1));
+    dock.querySelector('[data-player-prev]')!.addEventListener('click', () => step(-1));
+
+    const seekFromEvent = (event: MouseEvent) => {
+      const rect = barEl.getBoundingClientRect();
+      const ratio = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
+      if (Number.isFinite(audio.duration)) audio.currentTime = ratio * audio.duration;
+    };
+    barEl.addEventListener('click', seekFromEvent);
+    barEl.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowRight') audio.currentTime = Math.min(audio.currentTime + 5, audio.duration || 0);
+      if (event.key === 'ArrowLeft') audio.currentTime = Math.max(audio.currentTime - 5, 0);
+    });
+
+    audio.addEventListener('play', paint);
+    audio.addEventListener('pause', () => {
+      paint();
+      writeState();
+    });
+    audio.addEventListener('ended', () => step(1));
+    audio.addEventListener('timeupdate', () => {
+      paint();
+      if (Math.floor(audio.currentTime) % 5 === 0) writeState();
+    });
+    audio.addEventListener('loadedmetadata', paint);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') writeState();
+    });
+
+    void restore(state.index, state.time, state.playing);
+  }
+</script>
+
+<style>
+  .player-dock {
+    position: fixed;
+    left: 1rem;
+    bottom: 1rem;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    width: min(23rem, calc(100vw - 2rem));
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) + 4px);
+    background: var(--bg-overlay);
+    backdrop-filter: blur(14px) saturate(160%);
+    box-shadow: 0 6px 24px rgb(0 0 0 / 12%);
+    font-size: 0.8rem;
+  }
+
+  .player-btn {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+
+  .player-btn:hover {
+    transform: scale(1.06);
+  }
+
+  .player-btn svg {
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+
+  .player-btn-sm {
+    width: 1.5rem;
+    height: 1.5rem;
+    background: transparent;
+    color: var(--text-muted);
+  }
+
+  .player-btn-sm svg {
+    width: 0.85rem;
+    height: 0.85rem;
+  }
+
+  .player-btn-sm:hover {
+    color: var(--accent);
+  }
+
+  /* 播放/暂停图标按状态切换 */
+  .player-btn .icon-pause {
+    display: none;
+  }
+
+  .player-btn[data-playing='true'] .icon-play {
+    display: none;
+  }
+
+  .player-btn[data-playing='true'] .icon-pause {
+    display: block;
+  }
+
+  .player-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .player-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+  }
+
+  .player-title {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-weight: 600;
+  }
+
+  .player-artist {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+  }
+
+  .player-progress {
+    position: relative;
+    height: 0.28rem;
+    margin-top: 0.4rem;
+    border-radius: 999px;
+    background: var(--border);
+    cursor: pointer;
+  }
+
+  .player-progress-fill {
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: var(--accent);
+  }
+
+  .player-progress:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .player-right {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+  }
+
+  .player-time {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.72rem;
+    margin-right: 0.15rem;
+  }
+
+  /* 小屏收窄，避免遮挡正文 */
+  @media (max-width: 30rem) {
+    .player-dock {
+      width: calc(100vw - 2rem);
+    }
+
+    .player-time {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .player-btn {
+      transition: none;
+    }
+
+    .player-btn:hover {
+      transform: none;
+    }
+  }
+</style>

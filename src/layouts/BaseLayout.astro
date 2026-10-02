@@ -2,6 +2,8 @@
 import { ClientRouter } from 'astro:transitions';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import Player from '../components/Player.astro';
+import Particles from '../components/effects/Particles.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -35,11 +37,13 @@ const pageTitle = title ? `${title} · ${siteName}` : siteName;
   </head>
   <body>
     <a class="skip-link" href="#main">跳到正文</a>
+    <Particles />
     <Header />
     <main id="main">
       <slot />
     </main>
     <Footer />
+    <Player />
   </body>
 </html>
 

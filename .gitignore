@@ -9,6 +9,13 @@ dist/
 .env
 .env.production
 
+# 自托管音频：占位曲目体积虽小，但真实音乐不该进仓库，交给部署时同步
+public/audio/*.ogg
+public/audio/*.mp3
+public/audio/*.wav
+public/audio/*.flac
+public/audio/*.m4a
+
 # 编辑器与系统
 .vscode/*
 !.vscode/extensions.json

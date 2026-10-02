@@ -1,0 +1,19 @@
+{
+  "tracks": [
+    {
+      "title": "占位曲目 · 一",
+      "artist": "替换成你的音乐",
+      "src": "/blog/audio/placeholder-1.ogg"
+    },
+    {
+      "title": "占位曲目 · 二",
+      "artist": "替换成你的音乐",
+      "src": "/blog/audio/placeholder-2.ogg"
+    },
+    {
+      "title": "占位曲目 · 三",
+      "artist": "替换成你的音乐",
+      "src": "/blog/audio/placeholder-3.ogg"
+    }
+  ]
+}

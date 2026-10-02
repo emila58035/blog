@@ -1,6 +1,6 @@
 # 个人博客 · Astro 7 实施方案
 
-- 方案版本：v4（2026-10-02），已按 6 条批注修正；M0–M3 已落地，M3 关键关卡实测通过
+- 方案版本：v5（2026-10-02），已按 6 条批注修正；M0–M4 已落地，M3/M4 均经真实浏览器实测通过
 - 目标目录：`D:\Emila_58035\blog`
 - 部署：**GitHub Pages**（用户指定）
 - 范围：**不做评论功能**
@@ -55,27 +55,30 @@ D:\Emila_58035\blog\
 ├─ astro.config.mjs
 ├─ package.json
 ├─ tsconfig.json               # extends "astro/tsconfigs/base"
-├─ .github/workflows/deploy.yml
+├─ tools/
+│  └─ gen-placeholder-audio.mjs  # 合成占位曲目（换真实音乐后即可不用）
+├─ .github/workflows/deploy.yml  # M6 待建
 ├─ public/
 │  ├─ favicon.svg
 │  ├─ cursor/arrow.png         # 自定义光标（public = 原样拷贝，正合适）
-│  └─ audio/*.mp3              # 第一批音乐源（自托管，最稳）
+│  └─ audio/                   # 自托管音乐：playlist.json + *.ogg
+│                              # ⚠️ 音频文件已在 .gitignore 中，见 6.4b 部署约束
 └─ src/
    ├─ content.config.ts        # ★ 不是 src/content/config.ts
    ├─ content/posts/*.md
    ├─ assets/bg.jpg            # 需优化的背景图放这儿
    ├─ layouts/
-   │  ├─ BaseLayout.astro      # ★ html/head/ClientRouter + persist 播放器
-   │  └─ PostLayout.astro
+   │  └─ BaseLayout.astro      # ★ html/head/ClientRouter + 粒子 + 持久化播放器
    ├─ components/
-   │  ├─ Header.astro  Footer.astro  Background.astro  PostCard.astro
-   │  ├─ MusicPlayer.astro
-   │  └─ effects/ Particles.astro
+   │  ├─ Header.astro  Footer.astro  Player.astro
+   │  └─ effects/Particles.astro
    ├─ pages/
    │  ├─ index.astro  archive.astro  about.astro
    │  ├─ posts/[...id].astro
    │  ├─ tags/[tag].astro
-   │  └─ rss.xml.js
+   │  └─ rss.xml.ts
+   ├─ utils/
+   │  ├─ date.ts  url.ts       # ★ url.ts 的 href() 负责拼 base，避免 404
    └─ styles/global.css
 ```
 
@@ -246,9 +249,27 @@ afterSwap(newDoc, mediaSet);
 1. localStorage 记忆播放进度 + 切页后自动 seek 续播（会有一丝断缝，零兼容风险）
 2. 播放器改为固定在侧栏、不追求跨页连续（接受每页重载）
 
-**实现约束（M3 实测得出）**：
-- 播放器的初始化和 `.play()` 必须**加守卫只做一次**（例如 `if (audio.dataset.ready) return;`）。持久元素本身不会被重建，所以任何在每次 `astro:page-load` 都执行的初始化代码都会造成"歌照放、UI/实例被重建"的隐性 bug —— 我第一版实测脚本正是踩了这个坑，用 localStorage 复用同一个 id 反而伪造出"元素被保留"的假象。
+**实现约束（M3/M4 实测得出）**：
+- **持久化必须打在整个播放器容器上，不能只打在 `<audio>` 上。** M4 第一版把 `transition:persist` 只加在 `<audio>` 上，结果是：音频确实跨页不断（节点被原子搬运），但**按钮、标题、进度条被新页面的版本整体替换掉了**，而这些新节点上没有事件监听；加上"只初始化一次"的守卫，控件就彻底失效（歌在放，按什么都没反应）。**正确做法：把 `transition:persist` 打在 `.player-dock` 上，让 DOM 节点连同其监听器一起被搬运。**
+- 播放器的初始化必须**加守卫只做一次**（`if (dock.dataset.ready) return;`）。因为持久容器是同一个节点，脚本每次导航都会重新执行；不守卫会重复绑定监听，让一次点击触发多次。M4 实测：导航后连点两次"下一首"恰好前进两首，证明既没有重复绑定、控件也仍然有效。
 - 持久化元素必须由**两个页面都服务端渲染**出来（同一 `data-astro-transition-persist` 名字）。只在一侧出现的元素无法持久化。
+
+### ★ M4 实测结果（2026-10-02，真实 `<Player />` 组件，**通过**）
+
+用 CDP 驱动真实 Edge 154 走「首页播放 → 前进到归档 → 点两次下一首 → 再前进到关于 → 点暂停」：
+
+| 检查项 | 结果 |
+|---|---|
+| 首页渲染出播放器并加载第 1 首 | ✅ `count=3`、`src=/blog/audio/placeholder-1.ogg` |
+| 点击后开始播放 | ✅ `paused=false`、`playing=true`、`timeText=0:02` |
+| **前进导航后音频不断** | ✅ 2.264s → 4.300s，`paused=false` |
+| **前进导航后 UI 不被重置** | ✅ 标题/歌手/曲目数/时间文字/进度条宽度全部保持 |
+| 导航后点击控件仍然有效 | ✅ 第 1 首 → 第 2 首 → 第 3 首 |
+| 一次点击只前进一步（无重复绑定） | ✅ |
+| 第二次导航后音频与 UI 继续保持 | ✅ 3 首继续播放，标题保持 |
+| 导航后暂停仍然有效 | ✅ `paused=true`、`playing=false` |
+| 控制台报错 | ✅ 0 条 |
+
 
 ---
 
@@ -305,6 +326,15 @@ afterSwap(newDoc, mediaSet);
 > **字段契约已从 APlayer 源码实测确认**（`APlayer.min.js` v1.10.1 原文）：
 > `e.name=e.name||e.title||"Audio name", e.artist=e.artist||e.author||"Audio artist", e.cover=e.cover||e.pic, e.type=e.type||"normal"`
 > 即 `name/title`、`artist/author`、`cover/pic` 互为兜底 —— 所以返回 `title/author/pic` 结构的 API（如 i-meto）APlayer 能直接吃下。
+
+### 6.4b 自托管阶段（M4 现状）与部署约束
+
+M4 已按三阶段方案的第一阶段实现：**播放器不依赖任何外部 API**，歌单来自仓库内的 `public/audio/playlist.json`，音频是自托管文件。
+
+- 歌单格式（`public/audio/playlist.json`）：`{"tracks":[{"title","artist","src"}]}`，`src` 用站内绝对路径（含 `base` 前缀，如 `/blog/audio/xxx.ogg`）。
+- 占位音频由 `tools/gen-placeholder-audio.mjs` 合成，换真实音乐时替换 `public/audio/` 下的文件并改 `playlist.json` 即可，播放器代码不用动。
+- 支持的格式按浏览器兼容性排序：**`.ogg`（Vorbis）体积最优** > `.mp3` > `.m4a`。占位曲目是 16 kHz 单声道合成的 WAV 转 OGG，三首 40 秒共 219.8 KB。
+- ⚠️ **部署约束**：`.gitignore` 已排除 `public/audio/*.{ogg,mp3,wav,flac,m4a}`。因为 M6 走 GitHub Actions 从仓库构建，**这些音频必须另有同步途径，否则线上播放器会 404**。可选：① 把音频文件改为提交进仓库（体积大时考虑 Git LFS）；② M5 切到网易云直链后自托管文件即不再需要（这也是三阶段方案里第二阶段的正常结局）。M6 做 workflow 时必须把这条一起解决。
 
 ### 6.5 后端 API：为什么必须自建（已实测验证）
 
@@ -379,26 +409,24 @@ const bgUrl = (await getImage({ src: bg, width: 1920, format: 'webp' })).src;
 - 顶栏：`position: sticky; top: 0`。**纯 CSS，零风险。**
 
 ### ② 音乐播放器
-见第 6 节。CDN 三个资源已实测 **HTTP 200**：
+见第 6 节。已实测落地的实现分两个阶段：
+
+**M4 现状（自托管，已实现并实测通过）**：`src/components/Player.astro` 是一套不依赖任何第三方库的原生播放器 —— 左下角固定 dock、播放/暂停、上一首/下一首、可点击与方向键控制的进度条、`m:ss` 计时、`localStorage` 记忆曲目与进度。歌单来自 `public/audio/playlist.json`。**此时完全不需要 APlayer/MetingJS。**
+
+**M5 阶段（接网易云歌单时才引入）**：届时才需要下面三个 CDN 资源，均已实测 **HTTP 200**：
 `aplayer@1/dist/APlayer.min.js`、`aplayer@1/dist/APlayer.min.css`、`meting@2/dist/Meting.min.js`。
 
-其他约束：浏览器**禁止带声音自动播放**（必须等用户首次点击，浏览器策略，无解）。
+**两阶段共用的硬约束**：
+- 浏览器**禁止带声音自动播放**（必须等用户首次点击，浏览器策略，无解）→ 设计成"点击后播"。
+- 播放器容器必须带 `transition:persist`（打在**整个 dock** 上，见第 5 节 M4 实测），且每个页面都要 SSR 渲染出来。
 
 ### ③ 粒子（光标拖尾已按批注后置）
 
-```astro
-<!-- src/components/effects/Particles.astro -->
-<canvas id="particles" aria-hidden="true"></canvas>
-<script>
-  // 默认 script：打包 + 去重 + 每页只执行一次
-  const canvas = document.getElementById('particles');
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const mobile = matchMedia('(max-width: 768px)').matches;
-  if (canvas && !reduce && !mobile) { /* 手写 <80 行粒子循环 */ }
-</script>
-```
+已实现于 `src/components/effects/Particles.astro`：`<canvas class="particles">` + 手写粒子循环（粒子间连线，距离越近线越淡），无第三方库。
 
-三条纪律：移动端与 `prefers-reduced-motion` 默认关闭；`visibilitychange` 时暂停 `requestAnimationFrame`；粒子数 ≤60、`devicePixelRatio` 上限 2。不引第三方库。
+三条纪律都已落地：移动端（`max-width: 48rem`）与 `prefers-reduced-motion` 默认关闭（直接 `canvas.remove()`）；粒子数 ≤70 且按视口面积自适应；`devicePixelRatio` 上限 2。另外每次导航先 `cancelAnimationFrame` 上一帧，避免对已脱离文档的旧 canvas 继续绘制。
+
+⚠️ 注意：粒子画布用 `z-index: -1`，因此**背景色必须留在 `html` 上、`body` 保持透明**，否则不透明的 `body` 背景会把画布盖住（M4 已踩过并修正）。
 
 ---
 
@@ -509,11 +537,12 @@ npm run preview
 | **M1** | `content.config.ts` + 3 篇样例文章 + 列表页 + `[...id].astro` + RSS/sitemap | 本地能点能读，`/blog/rss.xml` 有内容 | ✅ 完成（提交 `3bacad2`） |
 | **M2** | `BaseLayout` + `Header` + `global.css` + 系统字体栈（放弃网络 CJK 字体） | 有个人风格的静态站 | ✅ 完成（提交 `85d8ef3`） |
 | **M3** | ★ `<ClientRouter />` + `transition:persist` + **真实 `<audio>` 实测** | **点导航音乐不断、进度不丢**；失败则切 localStorage 续播 | ✅ **实测通过**（见第 5 节，真实 Edge 154 三段导航） |
-| **M4** | 粒子 + 明暗切换（已提前完成）+ 播放器接自托管 mp3 | 移动端自动关闭特效 | ⬜ 待做 |
+| **M4** | 粒子 + 明暗切换（已提前完成）+ 播放器接自托管音频 | 移动端自动关闭特效 | ✅ 完成（见第 5 节 M4 实测；本地音频走自托管 OGG，M5 再切网易云） |
 | **M5** | 自建 Meting API（Cloudflare Workers）+ 切网易云歌单 | 歌单能加载、能播放 | ⬜ 待做 |
 | **M6** | GitHub Actions 部署上 GitHub Pages | 线上可访问，内部链接无 404 | ⬜ 待做 |
 
 **M3 关键关卡已通过**：`transition:persist` 对 `<audio>` 实测有效，方案心脏成立。
+**M4 已通过**：真实 `<Player />` 组件跨页不断歌，且 UI 与控件在导航后依然可用。
 
 ---
 
@@ -543,15 +572,17 @@ npm run preview
 - [x] MetingJS 字段契约 —— **已从 APlayer 源码实测确认** `name/title`、`artist/author`、`cover/pic` 互为兜底
 - [x] `<audio>` 能否被 `transition:persist` 跨页保留 —— **M3 已实测通过**：元素身份保持、`paused` 恒为 false、时间轴跨交换继续推进（前进/后退/再前进三段全过）
 - [x] `transition:persist` 是否必须有 `<ClientRouter />` —— **已从 ClientRouter 打包源码确认**：persist 就是路由器 swap 的一部分，且匹配依据是 `data-astro-transition-persist`
+- [x] 播放器 UI 能否与音频一起跨页保留 —— **M4 已实测**：必须把 persist 打在整个 dock 上；只打 `<audio>` 会让按钮/进度条被新页替换且监听丢失（第一版实测踩到并已修正）
 - [ ] MetingJS 属性名的连字符 vs 下划线（`list-folded` 还是 `list_folded`）—— M4 写组件时以本地 `Meting.min.js` 源码为准
 - [ ] `getImage()` 的完整签名（`astro-assets.mdx` 两次抓取失败）—— 用到时用 `astro build` 实跑验证
 - [ ] `typescript@7.0.2` 与 `astro/tsconfigs/base` 的兼容性（`@astrojs/check` 尚未安装）
-- [ ] `<meting-js>` 在 `transition:persist` 容器内的实际行为 —— M4/M5 实测（底层 `<audio>` 已被证明可持久化）
+- [ ] `<meting-js>` 在 `transition:persist` 容器内的实际行为 —— M5 实测（底层 `<audio>` 已被证明可持久化）
 
 ---
 
 ## 13. 变更记录
 
+- **v5（2026-10-02）**：**M4 完成**。新增 `src/components/Player.astro`（左下角固定播放器：播放/暂停、上一首/下一首、可点击与方向键可控的进度条、`m:ss` 计时、`localStorage` 记录曲目与进度续播）与 `src/components/effects/Particles.astro`（canvas 粒子连线背景，窄屏或 `prefers-reduced-motion` 时自动移除）；两者接入 `BaseLayout`，让每个页面都 SSR 渲染出持久容器。**修正一条关键实现约束**：persist 必须打在**整个 dock** 上而不是只打在 `<audio>` 上 —— 第一版只持久音频，导致导航后按钮/标题/进度条被新页替换且监听丢失、控件失效。第 5 节新增 M4 实测数据表与修正后的约束。占位音频用 `tools/gen-placeholder-audio.mjs` 合成 16-bit WAV 再转 OGG Vorbis（三首共 219.8 KB，比 WAV 小约 17 倍）；`public/audio/*.ogg|mp3|wav|flac|m4a` 已加入 `.gitignore`（真实音乐不进仓库）。为让 `z-index:-1` 的粒子画布可见，把 `--bg` 从 `body` 移到 `html` 并让 `body` 透明。里程碑表 M4 标记为完成。
 - **v4（2026-10-02）**：**M3 关键关卡实测通过**。用真实 Edge 154（CDP 驱动、真实 `<audio>` 播放）验证 `transition:persist` 对音频有效：三段导航（前进/后退/再前进）元素身份、播放状态、时间轴全部保持。同时从 ClientRouter 打包产物反混淆出 persist 的确切实现（匹配 `data-astro-transition-persist`；优先 `moveBefore()` 原子移动；交换后非持久媒体会被重建），把第 5 节从"预测 + NOT VERIFIED"改为"已确认机制 + 实测数据"，风险表该条 🔴→🟢。M2 记录补全（字体决策、进度）。M0–M3 均已提交。
 - **v3（2026-10-02）**：确认 GitHub 用户名为 **emila58035**（`site: https://emila58035.github.io`、`base: '/blog'`）；把 Meting/网易云实测结果并入第 6.5 节并重估风险（cookie 风险 🔴→🟢、公共 API 风险 🔴→🟡）；新增"只放免费歌"与"上游已切 EAPI"两条运维结论。**开始实际搭建**：M0 脚手架已落地并构建通过。
 - **v2（2026-10-02）**：按 6 条批注修正 —— 移除评论功能（Giscus 从方案与依赖中删除）；托管从 Cloudflare Pages 改为 **GitHub Pages**（新增 `base` 配置与官方 workflow，新增 base 链接坑与规避办法）；音乐源改为**网易云歌单**并新增第 6 节原理说明；确认 MVP 特效范围；本文档落盘。
