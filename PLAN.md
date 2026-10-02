@@ -1,7 +1,7 @@
 # 个人博客 · Astro 7 实施方案
 
-- 方案版本：v2（2026-10-02），已按 6 条批注修正
-- 目标目录：`D:\Emila_58035\blog`（当前为空，尚未安装任何东西）
+- 方案版本：v4（2026-10-02），已按 6 条批注修正；M0–M3 已落地，M3 关键关卡实测通过
+- 目标目录：`D:\Emila_58035\blog`
 - 部署：**GitHub Pages**（用户指定）
 - 范围：**不做评论功能**
 - MVP 特效：背景图 + 顶栏 + 粒子 + 固定音乐播放器（光标拖尾/点击爆裂后置）
@@ -196,17 +196,59 @@ const base = import.meta.env.BASE_URL;
 </html>
 ```
 
-**为什么不会断歌**：官方对 `transition:persist` 的原话是元素会 *"continue to play as you navigate to another page that contains the same video element. This works for both forwards and backwards navigation."* 路由器在交换 body 时会把旧 body 里带 persist 的元素**原样换回去**（`swapBodyElement()`），所以 `<audio>` 元素、播放进度、APlayer 实例都是同一个 DOM 节点，媒体流不被打断。
+**为什么不会断歌（已从 ClientRouter 运行时源码确认机制）**：`<ClientRouter />` 打包产物里定义常量 `t = 'data-astro-transition-persist'`，交换 body 时执行：
 
-**生效前提**：`transition:persist` 需要 `<ClientRouter />` 同时存在（文档未直接写这句，标记 NOT VERIFIED；但 persist 由路由器 swap 实现，必须成对使用）。
+```js
+// 反混淆自 dist/_astro/ClientRouter.*.js
+const a = new Set(newDoc.querySelectorAll('video, audio'));          // 新页面里的全部媒体元素
+const o = typeof documentElement.moveBefore === 'function'
+  ? (parent, node, ref) => parent.moveBefore(node, ref)              // 原子移动（Chrome 133+）
+  : null;
+for (const oldEl of oldDoc.querySelectorAll(`[${t}]`)) {             // 旧页面里带 persist 的元素
+  const key = oldEl.getAttribute(t);
+  const newTarget = newDoc.querySelector(`[${t}="${key}"]`);         // 按名字在新页面找锚点
+  if (newTarget) {
+    o ? o(documentElement, oldEl, null) : documentElement.appendChild(oldEl);
+    pairs.push({ old: oldEl, newTarget });
+  }
+}
+newDoc.replaceWith(oldDoc);
+for (const { old, newTarget } of pairs)
+  o ? o(newTarget.parentNode, old, newTarget) : newTarget.replaceWith(old);   // 落回原位
+afterSwap(newDoc, mediaSet);
+```
+
+三个要点：
+1. **匹配依据是 `data-astro-transition-persist`，不是 CSS 属性 `transition:persist`**。SSR 阶段编译器把 `transition:persist="m3player"` 转成 `data-astro-transition-persist="m3player"`，所以**新旧两个页面的服务端 HTML 里都必须有这个属性**，否则客户端找不到锚点，元素直接被替换。
+2. **用 `moveBefore()` 做原子移动**，媒体元素播放状态跨移动保留；浏览器不支持时才退回 `appendChild` / `replaceWith`。
+3. 交换后有个 `afterSwap` 步骤（源码里的 `l()`）：遍历新文档的 `video, audio`，**凡是不在持久集合里的都会被 `document.createElement` + 复制属性重建**——也就是说非持久媒体会被强制重置，持久的则原样保留。这正是"新页面的 `<audio>` 会被重置、持久化的不会"的实现。
+
+**生效前提**：`<ClientRouter />` 必须存在（源码可见 persist 是路由器的 swap 逻辑，不是独立指令）。这条现已从源码确认，不再是 NOT VERIFIED。
 
 **已核实的官方限制**：*"The restart of CSS animations and the reload of iframes cannot be avoided during view transitions even when using `transition:persist`."* → **iframe 方案作废**。
 
-**降级顺序**（若实测失败）：
+### ★ M3 实测结果（2026-10-02，真实 Edge 154 + 真实 `<audio>`，**通过**）
+
+实测方法：两个最小页面（`src/pages/m3check.astro`、`src/pages/archive-audit.astro`）各渲染同一个 `<audio transition:persist="m3player" src="/blog/audio/_audit-tone.wav">`；用 CDP（Edge `--headless=new` + `--autoplay-policy=no-user-gesture-required`）真实驱动浏览器，给元素盖随机戳后播放，再走前进/后退/再前进三段导航。**driver 不创建播放器、不注册任何 `astro:page-load` 回调**，避免干扰结论。
+
+| 检查项 | 前进 | 后退（点链接） | 再前进 |
+|---|---|---|---|
+| 元素身份（随机戳）保持 | ✅ | ✅ | ✅ |
+| 导航后仍 `paused === false` | ✅ | ✅ | ✅ |
+| 时间轴跨交换继续推进 | ✅ 1.892 → 1.998 | ✅ 4.019 → 4.144 | ✅ 4.145 → 4.540 |
+| 交换后 200ms 采样单调不减 | ✅ | — | — |
+
+- 环境确认：`typeof document.documentElement.moveBefore === 'function'` → **true**（走原子移动路径）。
+- 结论：**`transition:persist` 对 `<audio>` 有效，官方文档缺 `<audio>` 示例但机制通用**。方案的心脏成立，不需要启用 localStorage 降级作为主方案。
+- 顺带否掉的写法：手工 `setAttribute('transition:persist', '')` **不起作用**（运行时只认 `data-astro-transition-persist`）——实测中该写法元素在导航后消失。
+
+**降级顺序**（仍保留为兜底，正常路径不会走到）：
 1. localStorage 记忆播放进度 + 切页后自动 seek 续播（会有一丝断缝，零兼容风险）
 2. 播放器改为固定在侧栏、不追求跨页连续（接受每页重载）
 
-⚠️ **M3 一号实测项**：官方 persist 示例只给了 `<video>`，**没有 `<audio>` 专用示例**。必须用真实 `<audio>` 跑前进/后退导航，确认播放不中断、进度不丢。这是本方案唯一未经文档背书的假设。
+**实现约束（M3 实测得出）**：
+- 播放器的初始化和 `.play()` 必须**加守卫只做一次**（例如 `if (audio.dataset.ready) return;`）。持久元素本身不会被重建，所以任何在每次 `astro:page-load` 都执行的初始化代码都会造成"歌照放、UI/实例被重建"的隐性 bug —— 我第一版实测脚本正是踩了这个坑，用 localStorage 复用同一个 id 反而伪造出"元素被保留"的假象。
+- 持久化元素必须由**两个页面都服务端渲染**出来（同一 `data-astro-transition-persist` 名字）。只在一侧出现的元素无法持久化。
 
 ---
 
@@ -461,17 +503,17 @@ npm run preview
 
 ## 10. 里程碑
 
-| 阶段 | 内容 | 验收标准 |
-|---|---|---|
-| **M0** | 手写脚手架：`package.json` / `astro.config.mjs` / `tsconfig.json` / 目录 | `npm run dev` 起得来 |
-| **M1** | `content.config.ts` + 3 篇样例文章 + 列表页 + `[...id].astro` + RSS/sitemap | 本地能点能读，`/blog/rss.xml` 有内容 |
-| **M2** | `BaseLayout` + `Header` + `Background` + `global.css` + Fonts API | 有个人风格的静态站 |
-| **M3** | ★ `<ClientRouter />` + `transition:persist` + **真实 `<audio>` 实测** | **点导航音乐不断、进度不丢**；失败则切 localStorage 续播 |
-| **M4** | 粒子 + 明暗切换 + 播放器接自托管 mp3 | 移动端自动关闭特效 |
-| **M5** | 自建 Meting API（Cloudflare Workers）+ 切网易云歌单 | 歌单能加载、能播放 |
-| **M6** | GitHub Actions 部署上 GitHub Pages | 线上可访问，内部链接无 404 |
+| 阶段 | 内容 | 验收标准 | 状态 |
+|---|---|---|---|
+| **M0** | 手写脚手架：`package.json` / `astro.config.mjs` / `tsconfig.json` / 目录 | `npm run dev` 起得来 | ✅ 完成（提交 `b9b2429`） |
+| **M1** | `content.config.ts` + 3 篇样例文章 + 列表页 + `[...id].astro` + RSS/sitemap | 本地能点能读，`/blog/rss.xml` 有内容 | ✅ 完成（提交 `3bacad2`） |
+| **M2** | `BaseLayout` + `Header` + `global.css` + 系统字体栈（放弃网络 CJK 字体） | 有个人风格的静态站 | ✅ 完成（提交 `85d8ef3`） |
+| **M3** | ★ `<ClientRouter />` + `transition:persist` + **真实 `<audio>` 实测** | **点导航音乐不断、进度不丢**；失败则切 localStorage 续播 | ✅ **实测通过**（见第 5 节，真实 Edge 154 三段导航） |
+| **M4** | 粒子 + 明暗切换（已提前完成）+ 播放器接自托管 mp3 | 移动端自动关闭特效 | ⬜ 待做 |
+| **M5** | 自建 Meting API（Cloudflare Workers）+ 切网易云歌单 | 歌单能加载、能播放 | ⬜ 待做 |
+| **M6** | GitHub Actions 部署上 GitHub Pages | 线上可访问，内部链接无 404 | ⬜ 待做 |
 
-**M3 是关键关卡**，建议做完先停下验收再继续。
+**M3 关键关卡已通过**：`transition:persist` 对 `<audio>` 实测有效，方案心脏成立。
 
 ---
 
@@ -479,7 +521,7 @@ npm run preview
 
 | 风险 | 等级 | 应对 |
 |---|---|---|
-| `transition:persist` 对 `<audio>` 无官方示例 | 🔴 最高 | M3 一号实测项；备好 localStorage 续播 |
+| `transition:persist` 对 `<audio>` 无官方示例 | 🟢 低（原🔴最高） | **M3 已实测通过**（真实 Edge，前进/后退/再前进三段均保持播放与进度） |
 | 公共 Meting API 不稳定 | 🟡 中（原🔴高） | **已实测**：i-meto 的 `type=url` 已坏、injahow 通。结论不变（自建），但已不是猜测 |
 | 歌单混入 VIP 歌 → 30 秒试听或直接失败 | 🟡 中（新增） | 运维铁律：歌单**只放免费歌**（实测 VIP 歌 `fee:1` 只有 481,115 字节 / 30.07 秒） |
 | 上游 2026 年已切 EAPI 协议，老旧自建端会突然失效 | 🟡 中（新增） | 自建时优先选已适配 EAPI 的项目（`Zxis233/meting-workers`） |
@@ -499,15 +541,18 @@ npm run preview
 - [x] 网易云歌单接口在 2026 年是否仍需 cookie —— **已实测**：免费歌无需 cookie；VIP 歌（`fee:1`）做不到，且只有 30 秒试听
 - [x] 公共 Meting API 连通性 —— **已实测**：`api.i-meto.com` 歌单通(200) / `type=url` 全 404；`api.injahow.cn/meting/` 两级全通
 - [x] MetingJS 字段契约 —— **已从 APlayer 源码实测确认** `name/title`、`artist/author`、`cover/pic` 互为兜底
+- [x] `<audio>` 能否被 `transition:persist` 跨页保留 —— **M3 已实测通过**：元素身份保持、`paused` 恒为 false、时间轴跨交换继续推进（前进/后退/再前进三段全过）
+- [x] `transition:persist` 是否必须有 `<ClientRouter />` —— **已从 ClientRouter 打包源码确认**：persist 就是路由器 swap 的一部分，且匹配依据是 `data-astro-transition-persist`
 - [ ] MetingJS 属性名的连字符 vs 下划线（`list-folded` 还是 `list_folded`）—— M4 写组件时以本地 `Meting.min.js` 源码为准
-- [ ] `getImage()` 的完整签名（`astro-assets.mdx` 两次抓取失败）—— M2 用 `astro build` 实跑验证
+- [ ] `getImage()` 的完整签名（`astro-assets.mdx` 两次抓取失败）—— 用到时用 `astro build` 实跑验证
 - [ ] `typescript@7.0.2` 与 `astro/tsconfigs/base` 的兼容性（`@astrojs/check` 尚未安装）
-- [ ] `<meting-js>` 在 `transition:persist` 容器内的实际行为 —— M3 实测
+- [ ] `<meting-js>` 在 `transition:persist` 容器内的实际行为 —— M4/M5 实测（底层 `<audio>` 已被证明可持久化）
 
 ---
 
 ## 13. 变更记录
 
+- **v4（2026-10-02）**：**M3 关键关卡实测通过**。用真实 Edge 154（CDP 驱动、真实 `<audio>` 播放）验证 `transition:persist` 对音频有效：三段导航（前进/后退/再前进）元素身份、播放状态、时间轴全部保持。同时从 ClientRouter 打包产物反混淆出 persist 的确切实现（匹配 `data-astro-transition-persist`；优先 `moveBefore()` 原子移动；交换后非持久媒体会被重建），把第 5 节从"预测 + NOT VERIFIED"改为"已确认机制 + 实测数据"，风险表该条 🔴→🟢。M2 记录补全（字体决策、进度）。M0–M3 均已提交。
 - **v3（2026-10-02）**：确认 GitHub 用户名为 **emila58035**（`site: https://emila58035.github.io`、`base: '/blog'`）；把 Meting/网易云实测结果并入第 6.5 节并重估风险（cookie 风险 🔴→🟢、公共 API 风险 🔴→🟡）；新增"只放免费歌"与"上游已切 EAPI"两条运维结论。**开始实际搭建**：M0 脚手架已落地并构建通过。
 - **v2（2026-10-02）**：按 6 条批注修正 —— 移除评论功能（Giscus 从方案与依赖中删除）；托管从 Cloudflare Pages 改为 **GitHub Pages**（新增 `base` 配置与官方 workflow，新增 base 链接坑与规避办法）；音乐源改为**网易云歌单**并新增第 6 节原理说明；确认 MVP 特效范围；本文档落盘。
 - **v1（2026-10-02）**：初版。三份官方文档核实结果（View Transitions / 样式与脚本 / 内容集合与依赖版本）已并入。
