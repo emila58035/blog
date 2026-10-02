@@ -1,0 +1,76 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { formatDate } from '../../utils/date';
+import { href } from '../../utils/url';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts', ({ data }) => !data.draft);
+  return posts.map((post) => ({ params: { id: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+
+<BaseLayout title={post.data.title} description={post.data.description}>
+  <article>
+    <header>
+      <h1>{post.data.title}</h1>
+      <time datetime={post.data.pubDate.toISOString()}>{formatDate(post.data.pubDate)}</time>
+      {
+        post.data.tags.length > 0 && (
+          <ul class="tags">
+            {post.data.tags.map((tag) => (
+              <li>
+                <a href={href(`tags/${encodeURIComponent(tag)}/`)}>{tag}</a>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </header>
+    <div class="prose"><Content /></div>
+  </article>
+</BaseLayout>
+
+<style>
+  header time {
+    font-size: 0.9rem;
+    opacity: 0.65;
+  }
+  .tags {
+    display: flex;
+    gap: 0.5rem;
+    list-style: none;
+    padding: 0;
+    font-size: 0.85rem;
+  }
+  .prose :global(h2) {
+    margin-top: 2rem;
+  }
+  .prose :global(table) {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.925rem;
+  }
+  .prose :global(th),
+  .prose :global(td) {
+    border: 1px solid #ddd;
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+  }
+  .prose :global(pre) {
+    overflow-x: auto;
+    padding: 0.85rem 1rem;
+  }
+  .prose :global(code) {
+    font-size: 0.9em;
+  }
+  .prose :global(blockquote) {
+    margin-left: 0;
+    padding-left: 1rem;
+    border-left: 3px solid #ccc;
+    opacity: 0.85;
+  }
+</style>

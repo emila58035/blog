@@ -1,0 +1,47 @@
+---
+import { href } from '../utils/url';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+const siteName = 'Emila 的博客';
+const pageTitle = title ? `${title} · ${siteName}` : siteName;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href={href('favicon.svg')} />
+    {description && <meta name="description" content={description} />}
+    <title>{pageTitle}</title>
+  </head>
+  <body>
+    <nav class="site-nav">
+      <a href={href()}>首页</a>
+      <a href={href('archive/')}>归档</a>
+      <a href={href('about/')}>关于</a>
+    </nav>
+    <main>
+      <slot />
+    </main>
+  </body>
+</html>
+
+<style>
+  body {
+    margin: 0 auto;
+    max-width: 44rem;
+    padding: 1.5rem 1.25rem 4rem;
+    line-height: 1.75;
+  }
+  .site-nav {
+    display: flex;
+    gap: 1rem;
+    padding-bottom: 2rem;
+  }
+</style>

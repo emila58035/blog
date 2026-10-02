@@ -1,0 +1,57 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { formatDate, sortByDate } from '../utils/date';
+import { href } from '../utils/url';
+
+const posts = sortByDate(await getCollection('posts', ({ data }) => !data.draft));
+
+const byYear = new Map();
+for (const post of posts) {
+  const year = String(post.data.pubDate.getFullYear());
+  if (!byYear.has(year)) byYear.set(year, []);
+  byYear.get(year).push(post);
+}
+---
+
+<BaseLayout title="归档" description="全部文章，按年份排列。">
+  <h1>归档</h1>
+
+  {
+    [...byYear].map(([year, yearPosts]) => (
+      <section>
+        <h2>{year}</h2>
+        <ul>
+          {yearPosts.map((post) => (
+            <li>
+              <time datetime={post.data.pubDate.toISOString()}>{formatDate(post.data.pubDate)}</time>
+              <a href={href(`posts/${post.id}/`)}>{post.data.title}</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  }
+</BaseLayout>
+
+<style>
+  section h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2rem;
+  }
+  li {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.2rem 0;
+  }
+  time {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.6;
+    font-size: 0.9rem;
+  }
+</style>

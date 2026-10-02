@@ -1,0 +1,21 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { href } from '../utils/url';
+---
+
+<BaseLayout title="关于" description="关于这个博客和它的作者。">
+  <h1>关于</h1>
+
+  <p>你好，我是 Emila。这里放一些技术笔记、建站记录，以及偶尔的随笔。</p>
+
+  <h2>这个站点</h2>
+
+  <p>
+    用 <a href="https://astro.build">Astro</a> 构建，托管在
+    <a href="https://pages.github.com">GitHub Pages</a>。文章用 Markdown 写，全部源码在版本控制里。
+  </p>
+
+  <h2>订阅</h2>
+
+  <p><a href={href('rss.xml')}>RSS 订阅</a></p>
+</BaseLayout>
