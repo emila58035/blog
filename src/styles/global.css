@@ -210,47 +210,6 @@ th {
   font-weight: 600;
 }
 
-/* ===== 文章列表 ===== */
-.post-list {
-  list-style: none;
-  padding: 0;
-  margin: 2rem 0 0;
-}
-
-.post-list li {
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.post-list li:first-child {
-  border-top: 1px solid var(--border);
-}
-
-.post-list time,
-.entry-time {
-  display: block;
-  font-size: 0.8125rem;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
-}
-
-.post-list a {
-  font-size: 1.05rem;
-  font-weight: 550;
-  text-decoration: none;
-}
-
-.post-list a:hover {
-  text-decoration: underline;
-}
-
-.post-list p {
-  margin: 0.3rem 0 0;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
-
 /* ===== 标签 ===== */
 .tags {
   display: flex;

@@ -1,0 +1,82 @@
+---
+import { Image } from 'astro:assets';
+import heroImg from '../../assets/133284436_p0.jpg';
+
+interface Props {
+  title: string;
+  subtitle?: string;
+}
+
+const { title, subtitle } = Astro.props;
+---
+
+<section class="hero" data-hero>
+  <Image
+    src={heroImg}
+    alt=""
+    widths={[640, 960, 1280, 1600]}
+    sizes="(max-width: 44rem) 100vw, 704px"
+    loading="eager"
+  />
+  <div class="hero-text">
+    <h1>{title}</h1>
+    {subtitle && <p>{subtitle}</p>}
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    /* 收在内容栏内：宽度吃满 44rem，高度用比例定，再用 40vh 封顶。
+       视口矮的时候 max-height 会压过比例，图靠 object-fit 继续裁，不变形。
+
+       width 必须显式写成 100%：只给 aspect-ratio + min-height 时，
+       浏览器会反过来用 min-height 推宽度（实测 375px 视口下算出 373.33px，
+       比容器的 335px 还宽，直接横向溢出）。
+
+       比例取 2.2/1 而不是贴近原图的 2/1：原图 2932×1429（2.0518:1）底部
+       96.0%–98.6% 是作者署名 MUDDY-MOOD（实测：亮像素行 y=1372..1409）。
+       容器比例只有大于原图比例才会产生纵向裁切；配合 object-position: center top
+       把裁切全部放在下沿，窗口底边 = 2.0518 / 2.2 = 93.3% < 96.0%，署名被裁掉。
+       2/1 比原图窄，只会裁左右两侧，署名会整条留在画面最下沿。 */
+    width: 100%;
+    aspect-ratio: 2.2 / 1;
+    max-height: 40vh;
+    margin-bottom: 2.75rem;
+    border-radius: calc(var(--radius) + 6px);
+    overflow: hidden;
+    /* 图还没解码出来时先铺一层渐变，避免白闪 */
+    background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+  }
+
+  /* 用 :global 是因为 <img> 由 <Image> 组件渲染，不一定带上 scoped 属性 */
+  .hero :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* 裁切只吃下沿，把原图底部的作者署名裁掉 */
+    object-position: center top;
+  }
+
+  .hero-text {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 3rem 1.6rem 1.4rem;
+    color: #fff;
+    text-shadow: 0 1px 12px rgb(0 0 0 / 45%);
+    background: linear-gradient(to top, rgb(0 0 0 / 68%), rgb(0 0 0 / 0%));
+  }
+
+  .hero-text h1 {
+    margin: 0 0 0.3rem;
+    font-size: clamp(1.55rem, 1.15rem + 1.6vw, 2.2rem);
+    color: inherit;
+  }
+
+  .hero-text p {
+    margin: 0;
+    font-size: 0.925rem;
+    color: rgb(255 255 255 / 84%);
+  }
+</style>

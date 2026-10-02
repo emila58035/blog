@@ -104,6 +104,17 @@
 - 新增 `src/components/home/PostCard.astro`：封面图（可选）+ 标题 + 描述 + 日期 + 标签；
 - 首页改为**卡片列**：**每行一列**（用户 m01675 定），卡片占满内容栏宽度，封面图为宽幅横向裁切。
 
+**✅ 实际实现（U5 已完成，细节见下方「★ U5 实测结果」）**
+
+| 项 | 落地的值 | 与方案原文的差异 |
+| --- | --- | --- |
+| Hero 比例 | `aspect-ratio: 2.2 / 1` + `max-height: 40vh` | 原写「高约 40vh」；实测桌面 664×302（约 33.6vh） |
+| Hero 裁切 | `object-fit: cover` + `object-position: center top` | 新增：把原图底部的作者署名裁掉 |
+| Hero 宽度 | 显式 `width: 100%` | 新增：只给 `aspect-ratio` + `min-height` 会横向溢出 |
+| 卡片封面 | `aspect-ratio: 16 / 9` | 同原方案 |
+| 内容 schema | `schema: ({ image }) => z.object({ … cover: image().optional(), coverAlt: z.string().optional() })` | 原写 `cover: z.string()`；改成函数式 schema 才能让 frontmatter 直接写相对图片路径 |
+| 死代码 | 删掉 `src/styles/global.css` 里的 `.post-list` / `.entry-time` 整块 | 首页改用卡片后无人引用 |
+
 **卡片在有/无封面图时的两种形态（这是用户 m01690 问的，已定）**
 
 ```
@@ -185,7 +196,7 @@
 | U2 | 音量按钮 + 竖向滑条 | 音量生效并持久化；刷新后保持；不影响自动播放策略 | ✅ **已完成，12/12 通过** |
 | U3 | 歌单面板 | 78 首可滚动；当前曲高亮且自动滚入视野；点击即切歌；面板打开时不被自动收纳 | ✅ **已完成，22/22 通过** |
 | U4 | 自动收纳成 3.1rem 圆钮 | 悬停展开/移开收起；进度环反映播放进度；切页后状态保持 | ✅ **已完成，20/20 通过（含 U2/U3 回归 8/8）** |
-| U5 | 首页 Hero + 卡片列表 | 无 cover 的文章走 B2（不占位）；40vh 与内容栏对齐；移动端不塌 | ⬜ |
+| U5 | 首页 Hero + 卡片列表 | 无 cover 的文章走 B2（不占位）；40vh 与内容栏对齐；移动端不塌 | ✅ **已完成**；`image()` schema 与带 cover 卡片已实测 |
 | U6 | 文章页：TOC + 阅读时长 + 灯箱 | 锚点跳转正确；移动端 TOC 可折叠；灯箱键盘操作与多图切换可用 | ⬜ |
 | U7 | 顶栏透明过渡 | 首页首屏为透明白字；滚过 Hero 后变毛玻璃；其他页面始终毛玻璃 | ⬜ |
 | U8 | 图片接入 + 全量验收 | 构建耗时与体积可接受；线上真实浏览器复跑全部验收 | ⬜ |
@@ -344,11 +355,64 @@
 
 > 回归里有一条一开始 FAIL 是**测试自己的错**：没先关掉音量浮层就去等收纳，而"浮层开着不收纳"正是要被验证的行为。
 
+### ★ U5 实测结果（2026-10-02，同一套 CDP 环境）
+
+**改动清单**：新增 `src/components/home/Hero.astro`、`src/components/home/PostCard.astro`；改写 `src/pages/index.astro`（Hero + `.post-cards` 网格）；`src/content.config.ts` 的 schema 改成函数式并启用 `image()`；删掉 `src/styles/global.css` 里已成死代码的 `.post-list` / `.entry-time`。
+
+**★ 三道只有实测才会暴露的坎**
+
+1. **只给 `aspect-ratio` + `min-height`，宽度会被 `min-height` 反过来撑大 → 横向溢出。**
+   初版 `.hero` 写了 `aspect-ratio: 21 / 9; min-height: 10rem;`，375px 视口下实测 `getComputedStyle(hero).width === "373.328px"`，而它所在的 `main` 内容盒只有 335px（`main` 是 `max-width: 44rem; padding-inline: 1.25rem; box-sizing: border-box`）。`document.documentElement.scrollWidth` 从 375 变成 393，页面横向可滚。
+   成因：`min-height` 成了确定高度，浏览器用比例**反推宽度**（160 × 21/9 = 373.33）。
+   修法：`.hero` 显式写 `width: 100%`，把宽度钉死，比例只能驱动高度。改完 `overflowX: false`。
+
+2. **`aspect-ratio` 只有比原图更"宽"时才会纵向裁切，而这决定了原图底部的作者署名露不露。**
+   原图 `src/assets/133284436_p0.jpg` 是 2932×1429（比例 **2.0518**）。用 Python/PIL 扫左下角（x 1%–30%）的亮像素，实测署名 `MUDDY-MOOD` 占 **y = 1372..1409，即高度的 96.0%–98.6%**。
+   - 容器比例 **2/1 = 2.0 < 2.0518** → 图更宽，`cover` 按高度铺满，**只裁左右两侧**，整条署名留在画面最下沿被切一半，很难看；
+   - 容器比例 **2.2** → 纵向裁切，配 `object-position: center top` 把裁切全放到底部，可视窗口底边 = 2.0518 / 2.2 = **93.3% < 96.0%**，署名被裁掉。
+   所以最终取 `aspect-ratio: 2.2 / 1`，透明水印问题在桌面与移动端同时解决。
+
+3. **`<Image>` 渲染出的 `<img>` 不一定带 scoped 属性**（它是别的组件渲染的节点），`.hero img { }` 这类选择器可能匹配不上。统一写成 `.hero :global(img)` / `.post-card-cover :global(img)`。
+
+**实测数据**
+
+| 项 | 桌面 1100×900 | 移动 375×780 |
+| --- | --- | --- |
+| Hero | 664×302（占视口高 33.6%） | 335×152 |
+| 内容栏 | main 704（内容盒 664） | 335 |
+| 卡片宽度 | 664，间距 24 | 335，间距 24 |
+| 无 cover 卡片高 | 172 | 196 |
+| 横向溢出 | 无 | 无 |
+| `consoleErrors` | `[]` | `[]` |
+
+- `<Image>` 实际产出 `srcset`（640/960/1280/1600w + `sizes="(max-width: 44rem) 100vw, 704px"`），构建期转 WebP 五档：**34 / 67 / 113 / 167 / 455 kB**（原图 783 kB）。
+- `data-hero` 属性已按计划挂在 Hero 根节点上，供 **U7** 判断"顶栏是否压在 Hero 上"。
+
+**带 cover 的卡片（用小号临时文章 `_cover-test.md` 实测，验完已删）**
+
+- schema 改成 `({ image }) => z.object({ …, cover: image().optional(), coverAlt: z.string().optional() })` 后，frontmatter 里写 `cover: ../../assets/133284436_p0.jpg`（相对本篇 md 的路径）能正常构建——12 pages，无报错。
+- 封面盒实测 **662×372（比例 1.778，即 16/9）**、`object-fit: cover`、带 `srcset`、`alt` 取自 `coverAlt`；`href` 指向 `/blog/posts/_cover-test/`，链接带 `tabindex="-1"` + `aria-hidden="true"`（标题本身也是链接，避免屏幕阅读器重复播报）。
+- 卡片高度 **544**（封面 372 + 文字区 170）vs 无 cover 的 **172** —— 这正是 **B2** 的预期表现：同列卡片高低不齐，不占位。
+
+**其余页面回归（`_audit/u5-verify.cjs`，5 个页面全绿，`HTTP>=400` 为空）**
+
+| 页面 | 标题 | h1 | 有 Hero | 卡片数 |
+| --- | --- | --- | --- | --- |
+| `/blog/` | Emila 的博客 | Emila 的博客 | ✅ | 3 |
+| `/blog/archive/` | 归档 · Emila 的博客 | 归档 | — | 0 |
+| `/blog/about/` | 关于 · Emila 的博客 | 关于 | — | 0 |
+| `/blog/tags/建站/` | 标签：建站 · Emila 的博客 | 标签：建站 | — | 0 |
+| `/blog/posts/why-astro/` | 为什么最后选了 Astro · Emila 的博客 | 为什么最后选了 Astro | — | 0 |
+
+深色模式（`Emulation.setEmulatedMedia` 强制 `prefers-color-scheme: dark`）：卡片底 `rgb(27, 32, 39)`、边框 `rgb(42, 49, 56)`、Hero 标题仍是纯白 `rgb(255, 255, 255)`，与浅色一致可读。
+
+---
+
 ## 9. 待你拍板的小项
 
 以下是我已经定了默认做法、但你可能想改的地方，**不改就按这里写**：
 
-1. **Hero 的文案**：现在默认用 `Emila 的博客` + 副标题 `记录一些想法，以及折腾过的东西。`（取自首页现有文案）。要改写请直接给文字。
+1. **Hero 的文案**：**已按默认实施** —— 标题 `Emila 的博客`，副标题 `记录一些想法，以及折腾过的东西。`（取自首页原有文案）。要改写请直接给文字。
 2. ~~**卡片列表每行几个**~~ **已定（m01675）：每行一列。**
 3. **归档页/标签页是否也卡片化**：默认**不**改（保持现在的紧凑列表），只有首页卡片化。
 4. **圆钮的动画强度**：**已按用户批注定为唱片纹理**。收起态是一张迷你唱片——同心细沟 + 偏心的斜向高光 + 中心标签面，图标落在标签上；播放时匀速旋（6s/圈），暂停时停在当前角度。详见上文 U5 阶段的「★ 唱片纹理」小节。

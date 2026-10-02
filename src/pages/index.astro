@@ -1,25 +1,26 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { formatDate, sortByDate } from '../utils/date';
-import { href } from '../utils/url';
+import Hero from '../components/home/Hero.astro';
+import PostCard from '../components/home/PostCard.astro';
+import { sortByDate } from '../utils/date';
 
 const posts = sortByDate(await getCollection('posts', ({ data }) => !data.draft));
+const SUBTITLE = '记录一些想法，以及折腾过的东西。';
 ---
 
-<BaseLayout description="记录一些想法，以及折腾过的东西。">
-  <h1>Emila 的博客</h1>
-  <p>记录一些想法，以及折腾过的东西。</p>
+<BaseLayout description={SUBTITLE}>
+  <Hero title="Emila 的博客" subtitle={SUBTITLE} />
 
-  <ul class="post-list">
-    {
-      posts.map((post) => (
-        <li>
-          <time datetime={post.data.pubDate.toISOString()}>{formatDate(post.data.pubDate)}</time>
-          <a href={href(`posts/${post.id}/`)}>{post.data.title}</a>
-          {post.data.description && <p>{post.data.description}</p>}
-        </li>
-      ))
-    }
-  </ul>
+  <div class="post-cards">
+    {posts.map((post) => <PostCard post={post} />)}
+  </div>
 </BaseLayout>
+
+<style>
+  /* 每行一列：卡片吃满内容栏宽度 */
+  .post-cards {
+    display: grid;
+    gap: 1.5rem;
+  }
+</style>
