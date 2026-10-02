@@ -7,7 +7,7 @@ import { href } from '../utils/url';
 const posts = sortByDate(await getCollection('posts', ({ data }) => !data.draft));
 ---
 
-<BaseLayout description="记录一些想法和折腾过的东西。">
+<BaseLayout description="记录一些想法，以及折腾过的东西。">
   <h1>Emila 的博客</h1>
   <p>记录一些想法，以及折腾过的东西。</p>
 
@@ -23,24 +23,3 @@ const posts = sortByDate(await getCollection('posts', ({ data }) => !data.draft)
     }
   </ul>
 </BaseLayout>
-
-<style>
-  .post-list {
-    list-style: none;
-    padding: 0;
-  }
-  .post-list li {
-    padding: 0.75rem 0;
-    border-bottom: 1px solid #e5e5e5;
-  }
-  .post-list time {
-    display: block;
-    font-size: 0.85rem;
-    opacity: 0.65;
-  }
-  .post-list p {
-    margin: 0.25rem 0 0;
-    font-size: 0.925rem;
-    opacity: 0.8;
-  }
-</style>

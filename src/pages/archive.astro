@@ -6,11 +6,12 @@ import { href } from '../utils/url';
 
 const posts = sortByDate(await getCollection('posts', ({ data }) => !data.draft));
 
-const byYear = new Map();
+const byYear = new Map<string, typeof posts>();
 for (const post of posts) {
   const year = String(post.data.pubDate.getFullYear());
-  if (!byYear.has(year)) byYear.set(year, []);
-  byYear.get(year).push(post);
+  const bucket = byYear.get(year);
+  if (bucket) bucket.push(post);
+  else byYear.set(year, [post]);
 }
 ---
 
@@ -19,7 +20,7 @@ for (const post of posts) {
 
   {
     [...byYear].map(([year, yearPosts]) => (
-      <section>
+      <section class="year-group">
         <h2>{year}</h2>
         <ul>
           {yearPosts.map((post) => (
@@ -33,25 +34,3 @@ for (const post of posts) {
     ))
   }
 </BaseLayout>
-
-<style>
-  section h2 {
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-  }
-  ul {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 2rem;
-  }
-  li {
-    display: flex;
-    gap: 0.75rem;
-    padding: 0.2rem 0;
-  }
-  time {
-    font-variant-numeric: tabular-nums;
-    opacity: 0.6;
-    font-size: 0.9rem;
-  }
-</style>

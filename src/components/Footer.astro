@@ -1,0 +1,13 @@
+---
+import { href } from '../utils/url';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <p>
+    © {year} Emila ·
+    <a href={href('rss.xml')}>RSS</a> ·
+    <a href="https://github.com/emila58035">GitHub</a>
+  </p>
+</footer>

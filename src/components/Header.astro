@@ -1,0 +1,155 @@
+---
+import { href } from '../utils/url';
+
+const links = [
+  { path: '', label: '首页' },
+  { path: 'archive/', label: '归档' },
+  { path: 'about/', label: '关于' },
+];
+
+const current = Astro.url.pathname;
+const isActive = (path: string) => {
+  const target = href(path);
+  if (path === '') return current === target;
+  return current.startsWith(target);
+};
+---
+
+<header class="site-header">
+  <a class="brand" href={href()}>Emila</a>
+
+  <nav>
+    {
+      links.map((link) => (
+        <a href={href(link.path)} aria-current={isActive(link.path) ? 'page' : undefined}>
+          {link.label}
+        </a>
+      ))
+    }
+  </nav>
+
+  <button id="theme-toggle" type="button" aria-label="切换深浅色主题" title="切换主题">
+    <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="4.2"></circle>
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"></path>
+    </svg>
+    <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20 14.5A8.2 8.2 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"></path>
+    </svg>
+  </button>
+</header>
+
+<script>
+  const root = document.documentElement;
+  const toggle = document.getElementById('theme-toggle');
+
+  toggle?.addEventListener('click', () => {
+    const explicit = root.dataset.theme;
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = explicit ? explicit === 'dark' : prefersDark;
+
+    root.dataset.theme = isDark ? 'light' : 'dark';
+    try {
+      localStorage.setItem('theme', root.dataset.theme);
+    } catch {
+      /* 隐私模式下 localStorage 可能不可用，忽略即可 */
+    }
+  });
+</script>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding-block: 0.85rem;
+    background: var(--bg-overlay);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .brand {
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  nav {
+    display: flex;
+    gap: 1rem;
+    margin-left: auto;
+    font-size: 0.9rem;
+  }
+
+  nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 0.15rem 0;
+    border-bottom: 2px solid transparent;
+  }
+
+  nav a:hover {
+    color: var(--text);
+  }
+
+  nav a[aria-current='page'] {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  #theme-toggle {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--bg-elevated);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition:
+      color var(--transition),
+      border-color var(--transition);
+  }
+
+  #theme-toggle:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  #theme-toggle svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+  }
+
+  /* 亮色下显示月亮图标，暗色下显示太阳图标 */
+  .icon-sun {
+    display: none;
+  }
+  :global(:root[data-theme='dark']) .icon-sun {
+    display: block;
+  }
+  :global(:root[data-theme='dark']) .icon-moon {
+    display: none;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme='light'])) .icon-sun {
+      display: block;
+    }
+    :global(:root:not([data-theme='light'])) .icon-moon {
+      display: none;
+    }
+  }
+</style>

@@ -11,13 +11,20 @@ export async function getStaticPaths() {
 
 const { post } = Astro.props;
 const { Content } = await render(post);
+const updated =
+  post.data.updatedDate && post.data.updatedDate.valueOf() !== post.data.pubDate.valueOf()
+    ? post.data.updatedDate
+    : null;
 ---
 
 <BaseLayout title={post.data.title} description={post.data.description}>
   <article>
-    <header>
+    <header class="post-header">
       <h1>{post.data.title}</h1>
-      <time datetime={post.data.pubDate.toISOString()}>{formatDate(post.data.pubDate)}</time>
+      <div class="post-meta">
+        <time datetime={post.data.pubDate.toISOString()}>{formatDate(post.data.pubDate)}</time>
+        {updated && <span>修订于 {formatDate(updated)}</span>}
+      </div>
       {
         post.data.tags.length > 0 && (
           <ul class="tags">
@@ -30,47 +37,7 @@ const { Content } = await render(post);
         )
       }
     </header>
+
     <div class="prose"><Content /></div>
   </article>
 </BaseLayout>
-
-<style>
-  header time {
-    font-size: 0.9rem;
-    opacity: 0.65;
-  }
-  .tags {
-    display: flex;
-    gap: 0.5rem;
-    list-style: none;
-    padding: 0;
-    font-size: 0.85rem;
-  }
-  .prose :global(h2) {
-    margin-top: 2rem;
-  }
-  .prose :global(table) {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 0.925rem;
-  }
-  .prose :global(th),
-  .prose :global(td) {
-    border: 1px solid #ddd;
-    padding: 0.4rem 0.6rem;
-    text-align: left;
-  }
-  .prose :global(pre) {
-    overflow-x: auto;
-    padding: 0.85rem 1rem;
-  }
-  .prose :global(code) {
-    font-size: 0.9em;
-  }
-  .prose :global(blockquote) {
-    margin-left: 0;
-    padding-left: 1rem;
-    border-left: 3px solid #ccc;
-    opacity: 0.85;
-  }
-</style>

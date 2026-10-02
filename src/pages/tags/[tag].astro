@@ -10,7 +10,12 @@ export async function getStaticPaths() {
 
   return tags.map((tag) => ({
     params: { tag },
-    props: { tag, posts: posts.filter((post) => post.data.tags.includes(tag)) },
+    props: {
+      tag,
+      posts: posts
+        .filter((post) => post.data.tags.includes(tag))
+        .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()),
+    },
   }));
 }
 
@@ -19,7 +24,8 @@ const { tag, posts } = Astro.props;
 
 <BaseLayout title={`标签：${tag}`} description={`标签 ${tag} 下的全部文章。`}>
   <h1>标签：{tag}</h1>
-  <ul>
+
+  <ul class="archive-list">
     {
       posts.map((post) => (
         <li>
@@ -30,20 +36,3 @@ const { tag, posts } = Astro.props;
     }
   </ul>
 </BaseLayout>
-
-<style>
-  ul {
-    list-style: none;
-    padding: 0;
-  }
-  li {
-    display: flex;
-    gap: 0.75rem;
-    padding: 0.2rem 0;
-  }
-  time {
-    font-variant-numeric: tabular-nums;
-    opacity: 0.6;
-    font-size: 0.9rem;
-  }
-</style>
