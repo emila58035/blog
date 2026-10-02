@@ -17,7 +17,9 @@ git push
 
 推送到 `main` 后 GitHub Actions 会自动构建部署，约 1 分钟。**不需要手动构建或上传 `dist/`**。进度看 <https://github.com/emila58035/blog/actions>。
 
-本地想先看一眼效果再推，用 `npm run dev`（<http://localhost:4321/blog/>）。
+本地想先看一眼效果再推，用 `npm run dev`（<http://localhost:4321/blog/>）—— 改文件会自动刷新，`Ctrl+C` 停止。**改了什么没推上去就不算发布**，本地改动不推 push 对线上没有任何影响。
+
+写作与歌单的详细用法见下面「[写文章](#写文章)」与「[更换音乐歌单](#更换音乐歌单)」。
 
 ## 技术栈
 
@@ -45,29 +47,55 @@ npm run preview   # 预览构建产物
 
 ## 写文章
 
-在 `src/content/posts/` 下新建 Markdown 文件。文件名即 URL 片段：`my-post.md` → `/blog/posts/my-post/`。
+在 `src/content/posts/` 下新建 Markdown 文件。**文件名即 URL 片段**：`my-post.md` → `/blog/posts/my-post/`。文件名建议用英文或拼音（中文文件名能用，但网址里会被百分号转义）。
 
 frontmatter 字段由 `src/content.config.ts` 用 Zod 校验：
 
 ```markdown
 ---
 title: 文章标题
-date: 2026-10-02
+pubDate: 2026-10-02
+updatedDate: 2026-10-05
 description: 一句话摘要，会用于首页列表、文章 meta 与 RSS
 tags: [建站, Astro]
 draft: false
 ---
+
+正文从这里开始。
 ```
 
-`date` 缺省会报错；`draft: true` 的文章不会出现在任何列表里。
+| 字段 | 必填 | 说明 |
+|---|---|---|
+| `title` | ✅ | 标题 |
+| `pubDate` | ✅ | 发布日期，`2026-10-02` 这种格式最稳 |
+| `description` | 可选 | 摘要，出现在首页列表与 RSS |
+| `tags` | 可选 | 数组，每个标签会自动生成一个标签页 |
+| `updatedDate` | 可选 | 与 `pubDate` 不同时，正文顶部显示「修订于 …」 |
+| `draft` | 可选 | `true` 则**完全不生成**（首页、归档、标签页、RSS、文章页都没有） |
+
+⚠️ **`pubDate` 缺省或格式错，构建会直接失败**（Zod 校验），CI 会红叉。这是最常见的出错原因。
+⚠️ `draft: true` 的文章**本地也没法用网址访问**（路由不存在），不是「能预览但不发布」。
+
+写完之后发布、修改、删除，都是同一套动作 —— 见上面「[日常更新](#日常更新)」：
+
+- **发布**：新建 `.md` → `git add -A; git commit -m "新增文章：…"; git push`
+- **修改**：改文件内容 → 重新 commit + push。只改标题不改文件名，网址不变
+- **删除**：删掉文件 → commit + push。⚠️ **旧网址会变成 404，没有自动跳转**；已被分享或收录的文章建议另留说明
+- **改文件名** = 改网址，旧链接同样会 404
 
 ## 更换音乐歌单
 
-歌单数据来自 `public/audio/playlist.json`，它由脚本生成，**不要手改**。
+歌单数据来自 `public/audio/playlist.json`。
+
+**① 拿到网易云歌单 ID** —— 网页版进歌单，地址栏形如 `https://music.163.com/#/playlist?id=60198`，`id=` 后面那串数字就是。歌单**必须是公开的**，私密歌单拉不到。
+
+**② 重新生成**：
 
 ```bash
-node tools/music/fetch-playlist.mjs <网易云歌单ID>
+node tools/music/fetch-playlist.mjs <网易云歌单ID>   # 省略参数则用默认的 60198
 ```
+
+输出形如 `歌单共 89 首，保留 33 首，跳过 56 首（仅试听）`，然后 commit + push 即可。
 
 脚本会用网易云的播放列表接口读取整张歌单的 `fee` 字段，只保留能完整播放的曲目：
 
@@ -79,13 +107,32 @@ node tools/music/fetch-playlist.mjs <网易云歌单ID>
 
 > 这条过滤是必需的。`fee:1` 的曲目在公共 Meting API 上同样只返回 30 秒（限流在网易云侧），放进歌单会播放一半就断。
 
-**换自建 Meting 后端**只需改环境变量，然后重新生成歌单，播放器代码不用动：
+**③ 手动加减单曲**：可以直接编辑 `public/audio/playlist.json` 的 `tracks` 数组。
+
+```json
+{
+  "tracks": [
+    {
+      "id": 3410257938,
+      "title": "Been By Now",
+      "artist": "Morgan Wallen",
+      "src": "https://api.injahow.cn/meting/?server=netease&type=url&id=3410257938",
+      "cover": "https://api.injahow.cn/meting/?server=netease&type=pic&id=3410257938",
+      "lrc": "https://api.injahow.cn/meting/?server=netease&type=lrc&id=3410257938"
+    }
+  ]
+}
+```
+
+- 播放器实际只读 **`src`、`title`、`artist`** 三个字段（`cover`、`lrc` 目前未使用，留着是给以后加封面与歌词的余地）。
+- **`src` 含 `://` 当作完整 URL，否则按站内路径解析** —— 所以也可以把**自己的音频丢进 `public/audio/`**，然后写相对路径 `audio/mine.mp3`，与网易云曲目混在同一张歌单里（将来想完全自托管也是这条路，不用改代码）。
+- ⚠️ 下次再跑 `fetch-playlist.mjs` 会**整个覆写**这个文件，手改内容会丢；要长期保留就先备份。
+
+**④ 换自建 Meting 后端**只需改环境变量，然后重新生成歌单，播放器代码不用动：
 
 ```bash
 METING_API=https://你的地址/ node tools/music/fetch-playlist.mjs 60198
 ```
-
-播放器对 `src` 的处理是「含 `://` 当完整 URL，否则按站内路径解析」，所以将来想改成完全自托管（把音频文件放进 `public/audio/`，歌单写相对路径）也不用改代码。
 
 ## 部署
 

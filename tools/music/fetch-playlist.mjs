@@ -8,8 +8,10 @@
 //   播放列表接口（免费歌无需 cookie）一次性拿到整张歌单的 fee 标记。
 //
 // 用法：
-//   node tools/fetch-playlist.mjs [歌单ID]
-//   node tools/fetch-playlist.mjs 60198
+//   node tools/music/fetch-playlist.mjs [歌单ID]     # 省略则用默认 60198
+//   node tools/music/fetch-playlist.mjs 60198
+//
+// 必须在仓库根目录执行（输出路径基于 process.cwd()）。
 //
 // 输出：public/audio/playlist.json
 //   { "source": "meting", "api": "...", "server": "netease",
