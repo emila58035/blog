@@ -20,6 +20,10 @@
   --radius: 10px;
   --content-width: 44rem;
   --transition: 180ms ease;
+
+  /* 顶栏在流里的占位高度。BaseLayout 会在 <main> 解析前用真实测量值覆盖它，
+     这里的值只是脚本没跑起来时的兜底。首页 Hero 靠它钻到顶栏底下。 */
+  --header-h: 3.8125rem;
 }
 
 :root[data-theme='dark'] {
@@ -113,6 +117,12 @@ main,
 
 main {
   padding-block: 2.5rem 4rem;
+}
+
+/* 首页有 Hero 时不留顶部内边距，让 Hero 直接贴到顶栏下沿，
+   再由 Hero 自己的负外边距拉到页面顶端、钻到顶栏底下。 */
+main:has([data-hero]) {
+  padding-block-start: 0;
 }
 
 .site-footer {

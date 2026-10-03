@@ -165,6 +165,25 @@
 
 **这里有一个必须遵守的既有约束**：主题恢复脚本依赖 `astro:before-swap` 把 `data-theme` 同步到 `event.newDocument.documentElement`。新增的顶栏透明态逻辑**不要**放进每个页面各自的脚本里（客户端导航后不会重跑），要么放进 `BaseLayout` 的那段 `is:inline` 脚本，要么监听 `astro:page-load`。
 
+**✅ 实际实现（U7 已完成）**
+
+| 项 | 落地位置 | 做法 |
+|---|---|---|
+| 透明态 | `src/components/Header.astro` | `.site-header[data-over-hero='true']`：`background: transparent` + `backdrop-filter: none` + `border-bottom-color: transparent`；brand 转 `#fff`，nav 转 `rgb(255 255 255 / 78%)`，当前项 `#fff` + 白下划线，主题按钮改成半透明黑底 |
+| 状态切换 | 同文件 `<script>` | `syncHeader()` 里 `new IntersectionObserver(([entry]) => header.toggleAttribute('data-over-hero', entry.isIntersecting))`，挂 `astro:page-load` |
+| Hero 钻到顶栏下 | `src/styles/global.css` | `main:has([data-hero]) { padding-block-start: 0; }` |
+| 让位量 | 同上 + `src/components/home/Hero.astro` | `:root` 里 `--header-h: 3.8125rem` 兜底，`BaseLayout` 量出真实高度覆盖；`.hero { margin-top: calc(-1 * var(--header-h)); }` |
+| 顶部压暗 | `src/components/home/Hero.astro` | `.hero::after` 铺一条高 `calc(var(--header-h) + 1.5rem)` 的黑色渐变，保证白字在任何图上都读得出来 |
+| 量高度 | `src/layouts/BaseLayout.astro` | 在 `<Header />` 与 `<main>` 之间插一段 `is:inline` 脚本，趁 `<main>` 还没解析就把 `offsetHeight` 写进 `--header-h`，首帧不跳 |
+
+**三处只有跑起来才会暴露的坑**
+
+1. **`--header-h` 熬不过客户端导航**：`ClientRouter` 换的是**新 Document 的 `<html>`**，内联写的 `style` 会丢。修法与主题那套一致——在 `astro:before-swap` 里把值同步到 `event.newDocument.documentElement`，另外 `syncHeader()` 每次换页都重新量一次。
+2. **模块顶层抓的元素会变成旧节点**：`const header = document.querySelector('[data-header]')` 只在模块执行时抓一次，客户端导航后那个节点已经脱离文档，属性写在它身上页面上看不出来 → 必须每次进 `syncHeader()` 重新 `querySelector`。
+3. **顺手修掉一个旧 bug**：主题按钮原来是 `document.getElementById('theme-toggle')?.addEventListener(...)`，模块脚本只跑一次，**客户端导航之后按钮就换成新节点、点不动了**。改成在 `document` 上做点击委托（`event.target.closest('#theme-toggle')`）后恢复正常，已补进验收用例。
+
+**还有一条工具链上的坑**：`backdrop-filter` 和 `-webkit-backdrop-filter` 两条都写时，lightningcss 压缩后**只留下带前缀的那条**，标准属性被丢掉（`getComputedStyle` 读出来是 `none`）。只写标准属性 `backdrop-filter` 反而会被正常保留。
+
 ## 6. 图片与用户需要准备的东西
 
 | 项 | 说明 | 建议规格 |
@@ -211,7 +230,7 @@
 | U4 | 自动收纳成 3.1rem 圆钮 | 悬停展开/移开收起；进度环反映播放进度；切页后状态保持 | ✅ **已完成，20/20 通过（含 U2/U3 回归 8/8）** |
 | U5 | 首页 Hero + 卡片列表 | 无 cover 的文章走 B2（不占位）；40vh 与内容栏对齐；移动端不塌 | ✅ **已完成**；`image()` schema 与带 cover 卡片已实测 |
 | U6 | 文章页：TOC + 阅读时长 + 灯箱 | 锚点跳转正确；移动端 TOC 可折叠；灯箱键盘操作与多图切换可用 | ✅ **已完成，24/24 通过** |
-| U7 | 顶栏透明过渡 | 首页首屏为透明白字；滚过 Hero 后变毛玻璃；其他页面始终毛玻璃 | ⬜ |
+| U7 | 顶栏透明过渡 | 首页首屏为透明白字；滚过 Hero 后变毛玻璃；其他页面始终毛玻璃 | ✅ **已完成，24/24 通过**；顺手修掉主题按钮在客户端导航后失效的旧 bug |
 | U8 | 图片接入 + 全量验收 | 构建耗时与体积可接受；线上真实浏览器复跑全部验收 | ⬜ |
 
 **每个里程碑都用真实 Edge（CDP 驱动）验证后再提交**，沿用既有做法：提交信息用中文，git 版本控制，不使用过度防御性编程。
@@ -455,6 +474,33 @@
 修法：改成 `position: fixed`，直接以视口定位（左右各 `1rem`、关闭键 `top: 1rem; right: 1rem`），顺带删掉了原来那条窄屏媒体查询。**又一次印证 U3/U4 的教训：结构化断言代替不了看一眼真实渲染。**
 
 **回看脚本（`_audit/`，已 gitignore）**：`u6-verify.cjs`（24 条验收 + 截图）、`u6-anchor.cjs`（打印文档高度、标题绝对位置、`scroll-margin-top`，用来定位锚点问题）。截图落在 `C:\Users\Emila_58035\AppData\Local\Temp\`：`u6-post-top.png`、`u6-lightbox.png`、`u6-post-mobile.png`。
+
+### ★ U7 实测结果（2026-10-02，同一套 CDP 环境）
+
+`_audit/u7-verify.cjs` → **24/24 通过**，`consoleErrors []`、无 4xx/5xx。
+
+| # | 断言 | 结果 |
+|---|---|---|
+| 1 | 首页首屏 `data-over-hero` 为真 | ✅ |
+| 2 | 顶栏 `background-color` = `rgba(0, 0, 0, 0)`、`backdrop-filter` = `none`、`border-bottom-color` 透明 | ✅ |
+| 3 | 品牌字色 `rgb(255, 255, 255)` | ✅ |
+| 4 | Hero `getBoundingClientRect().top === 0`（真的钻到顶栏下面） | ✅ |
+| 5 | `--header-h` 与实测顶栏高度一致（`61px`） | ✅ |
+| 6 | 首页/窄屏均无横向溢出 | ✅ |
+| 7 | 滚过 Hero 后 `data-over-hero` 转假，背景回 `rgba(247, 248, 250, 0.72)`、字色回 `rgb(31, 41, 51)`、`backdrop-filter` 含 `blur` | ✅ |
+| 8 | 滚回顶部又转透明 | ✅ |
+| 9 | 客户端导航到归档页：无 Hero、顶栏不透明 | ✅ |
+| 10 | 客户端导航回首页：顶栏又压上 Hero 且 Hero 仍 `top === 0` | ✅ |
+| 11 | 文章页顶栏始终毛玻璃 | ✅ |
+| 12 | 窄屏（390×780）同样压上 Hero、`--header-h` 与实测一致 | ✅ |
+| 13 | 深色模式首屏仍透明 + 白字；滚过后背景 `rgba(20, 24, 29, 0.72)` | ✅ |
+| 14 | **客户端导航后主题按钮仍能切换**（旧 bug 回归用例） | ✅ |
+
+**★ 测试用例本身踩的坑（值得记一笔）**
+
+第一轮 16/23，其中四条「滚过 Hero 后恢复毛玻璃」的失败**不是代码问题**：桌面 1100×900 下首页总高只有约 1100，最大滚动量仅 196px，而 Hero 本身高 302px —— **页面短到根本滚不过 Hero**，毛玻璃状态自然不会出现。换成 1100×560 的矮视口后复测全绿。教训：验「滚动触发某状态」时，必须先确认文档真的有足够的滚动余量。
+
+**回看脚本**：`_audit/u7-verify.cjs`。截图：`u7-home-top.png`（透明顶栏压在 Hero 上）、`u7-home-scrolled.png`（毛玻璃复原）、`u7-home-mobile.png`。
 
 ---
 

@@ -36,8 +36,12 @@ const pageTitle = title ? `${title} · ${siteName}` : siteName;
         // 客户端导航时，新页面的 <html> 在交换那一刻还没有主题属性。
         // 在交换前同步补上，避免每次跳页都闪一下默认主题。
         document.addEventListener('astro:before-swap', (event) => {
+          const target = event.newDocument.documentElement;
           const theme = document.documentElement.dataset.theme;
-          if (theme) event.newDocument.documentElement.dataset.theme = theme;
+          if (theme) target.dataset.theme = theme;
+          // 顶栏高度是量出来的，同样要在交换前带过去，别让 Hero 跳一下
+          const headerH = document.documentElement.style.getPropertyValue('--header-h');
+          if (headerH) target.style.setProperty('--header-h', headerH);
         });
       })();
     </script>
@@ -46,6 +50,14 @@ const pageTitle = title ? `${title} · ${siteName}` : siteName;
     <a class="skip-link" href="#main">跳到正文</a>
     <Particles />
     <Header />
+    <script is:inline>
+      // 顶栏高度要参与布局（首页 Hero 会钻到它下面），这里趁 <main> 还没解析
+      // 就量出来写进 CSS 变量，避免首帧跳一下。
+      const header = document.querySelector('[data-header]');
+      if (header) {
+        document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+      }
+    </script>
     <main id="main">
       <slot />
     </main>

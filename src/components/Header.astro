@@ -15,7 +15,7 @@ const isActive = (path: string) => {
 };
 ---
 
-<header class="site-header">
+<header class="site-header" data-header>
   <a class="brand" href={href()}>Emila</a>
 
   <nav>
@@ -40,21 +40,50 @@ const isActive = (path: string) => {
 </header>
 
 <script>
-  const root = document.documentElement;
-  const toggle = document.getElementById('theme-toggle');
+  // 事件委托挂在 document 上：客户端导航会把按钮换成新节点，
+  // 直接绑在按钮上的监听不会跟着活过来。
+  document.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element) || !event.target.closest('#theme-toggle')) return;
 
-  toggle?.addEventListener('click', () => {
+    const root = document.documentElement;
     const explicit = root.dataset.theme;
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDark = explicit ? explicit === 'dark' : prefersDark;
 
-    root.dataset.theme = isDark ? 'light' : 'dark';
+    root.dataset.theme = (explicit ? explicit === 'dark' : prefersDark) ? 'light' : 'dark';
     try {
       localStorage.setItem('theme', root.dataset.theme);
     } catch {
       /* 隐私模式下 localStorage 可能不可用，忽略即可 */
     }
   });
+
+  // 顶栏压在首页 Hero 上时改成透明 + 白字，滚过 Hero 再换回毛玻璃。
+  // 模块脚本客户端导航后不会重跑，所以每次换页都在 astro:page-load 里重新来一遍；
+  // 同理，header 元素每次都是新节点，不能在模块顶层抓一次就一直用。
+  let observer: IntersectionObserver | undefined;
+
+  const syncHeader = () => {
+    const header = document.querySelector<HTMLElement>('[data-header]');
+    if (!header) return;
+
+    document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+
+    observer?.disconnect();
+    const hero = document.querySelector('[data-hero]');
+    if (!hero) {
+      header.removeAttribute('data-over-hero');
+      return;
+    }
+
+    // 先按"压着 Hero"渲染，滚动位置交给 observer 修正
+    header.setAttribute('data-over-hero', 'true');
+    observer = new IntersectionObserver(([entry]) => {
+      header.toggleAttribute('data-over-hero', entry.isIntersecting);
+    });
+    observer.observe(hero);
+  };
+
+  document.addEventListener('astro:page-load', syncHeader);
 </script>
 
 <style>
@@ -68,8 +97,44 @@ const isActive = (path: string) => {
     padding-block: 0.85rem;
     background: var(--bg-overlay);
     backdrop-filter: saturate(180%) blur(12px);
-    -webkit-backdrop-filter: saturate(180%) blur(12px);
     border-bottom: 1px solid var(--border);
+    transition:
+      background-color var(--transition),
+      border-color var(--transition);
+  }
+
+  /* 压在首页 Hero 上：透明底 + 白字，去掉毛玻璃和分隔线 */
+  .site-header[data-over-hero='true'] {
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom-color: transparent;
+  }
+
+  .site-header[data-over-hero='true'] .brand {
+    color: #fff;
+  }
+
+  .site-header[data-over-hero='true'] nav a {
+    color: rgb(255 255 255 / 78%);
+  }
+
+  .site-header[data-over-hero='true'] nav a:hover {
+    color: #fff;
+  }
+
+  .site-header[data-over-hero='true'] nav a[aria-current='page'] {
+    color: #fff;
+    border-bottom-color: rgb(255 255 255 / 85%);
+  }
+
+  .site-header[data-over-hero='true'] #theme-toggle {
+    background: rgb(0 0 0 / 25%);
+    border-color: rgb(255 255 255 / 40%);
+    color: #fff;
+  }
+
+  .site-header[data-over-hero='true'] #theme-toggle:hover {
+    border-color: #fff;
   }
 
   .brand {
