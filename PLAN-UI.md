@@ -144,6 +144,19 @@
 - **阅读时长/字数**：用 `post.body` 估算（需扣掉代码块与 frontmatter 再数，否则代码多的文章会虚高）；
 - **灯箱**：新增 `src/components/ImageLightbox.astro`，用原生 `<dialog>`，`Esc` 关闭、`←/→` 切换、点击背景关闭。**不引第三方库。**
 
+**✅ 实际实现（U6 已完成）**
+
+| 项 | 落地位置 | 做法 |
+|---|---|---|
+| 目录 | 新增 `src/components/TableOfContents.astro` | `<details data-toc>` + `<summary>目录</summary>` + `<ol>`；只收 `depth === 2 \|\| depth === 3`，少于两条不渲染；`<script>` 监听 `astro:page-load`，按 `(min-width: 48rem)` 决定默认开合 |
+| 阅读时长 | 新增 `src/utils/reading.ts` | `readingMinutes(markdown: string): number`，中文 350 字/分 + 西文 200 词/分，剥掉 frontmatter／围栏代码块／行内代码／图片链接地址后计数 |
+| 灯箱 | 新增 `src/components/ImageLightbox.astro` | 空壳 `<dialog>`；脚本在模块顶层注册一次 document 级点击委托，现场收集 `.prose img` 作相册 |
+| 顶栏让位 | `src/styles/global.css` | `.prose :is(h2, h3, h4) { scroll-margin-top: 4.5rem; }` |
+
+- `src/pages/posts/[...id].astro` 的改动：`const { Content, headings } = await render(post);`；`const minutes = readingMinutes(post.body ?? '');`；meta 行加 `<span>约 {minutes} 分钟</span>`；`</header>` 之后插 `<TableOfContents headings={headings} />`；`</article>` 之后插 `<ImageLightbox />`。
+- **TOC 锚点不需要特殊处理**：`node_modules/astro/dist/transitions/router.js` 里 `samePage()` 只比 `pathname` + `search`，同页 hash 链接走 `moveToLocation()`，最终 `location.href = to.href` 交给浏览器原生片段导航。
+- **灯箱只接管 `.prose` 里的裸图**：`target.closest('a')` 为真时放行，被链接包住的图仍走原链接。
+
 ### 5.4 顶栏 `src/components/Header.astro`
 
 - 检测当前页是否存在 Hero 元素（`document.querySelector('[data-hero]')`）；
@@ -197,7 +210,7 @@
 | U3 | 歌单面板 | 78 首可滚动；当前曲高亮且自动滚入视野；点击即切歌；面板打开时不被自动收纳 | ✅ **已完成，22/22 通过** |
 | U4 | 自动收纳成 3.1rem 圆钮 | 悬停展开/移开收起；进度环反映播放进度；切页后状态保持 | ✅ **已完成，20/20 通过（含 U2/U3 回归 8/8）** |
 | U5 | 首页 Hero + 卡片列表 | 无 cover 的文章走 B2（不占位）；40vh 与内容栏对齐；移动端不塌 | ✅ **已完成**；`image()` schema 与带 cover 卡片已实测 |
-| U6 | 文章页：TOC + 阅读时长 + 灯箱 | 锚点跳转正确；移动端 TOC 可折叠；灯箱键盘操作与多图切换可用 | ⬜ |
+| U6 | 文章页：TOC + 阅读时长 + 灯箱 | 锚点跳转正确；移动端 TOC 可折叠；灯箱键盘操作与多图切换可用 | ✅ **已完成，24/24 通过** |
 | U7 | 顶栏透明过渡 | 首页首屏为透明白字；滚过 Hero 后变毛玻璃；其他页面始终毛玻璃 | ⬜ |
 | U8 | 图片接入 + 全量验收 | 构建耗时与体积可接受；线上真实浏览器复跑全部验收 | ⬜ |
 
@@ -406,6 +419,43 @@
 
 深色模式（`Emulation.setEmulatedMedia` 强制 `prefers-color-scheme: dark`）：卡片底 `rgb(27, 32, 39)`、边框 `rgb(42, 49, 56)`、Hero 标题仍是纯白 `rgb(255, 255, 255)`，与浅色一致可读。
 
+### ★ U6 实测结果（2026-10-02，同一套 CDP 环境）
+
+临时造了一篇 `src/content/posts/_lightbox-test.md`（4 个 h2 + 1 个 h3 + 2 张图，验完已删，`git status --short` 确认无残留），跑 `_audit/u6-verify.cjs` → **24/24 通过**，`consoleErrors []`、无 4xx/5xx。
+
+| # | 断言 | 结果 |
+|---|---|---|
+| 1 | TOC 存在且宽屏默认展开 | ✅ `open: true` |
+| 2 | 五条（4 个 h2 + 1 个 h3），h3 带 `toc-depth-3` | ✅ |
+| 3 | 每个 `href` 都有对应 `id` | ✅ |
+| 4 | 点目录滚到锚点且**让开 sticky 顶栏** | ✅ 见下 |
+| 5 | meta 行有阅读时长 | ✅ `约 1 分钟` |
+| 6 | 灯箱初始未打开 | ✅ |
+| 7 | 点图打开、计数 `1 / 2`、放的是同一张 | ✅ |
+| 8 | `→` 切到 `2 / 2`、越界回 `1 / 2`、`←` 回 `2 / 2` | ✅ |
+| 9 | 点背景关闭 / `Esc` 关闭 | ✅ |
+| 10 | 点第二张直接定位到 `2 / 2` | ✅ |
+| 11 | 正文图片 `cursor: zoom-in` | ✅ |
+| 12 | 客户端导航绕一圈（文章 → 标签页 → 文章）后灯箱仍能打开 | ✅ |
+| 13 | 窄屏（390px）TOC 默认收起、无横向溢出 | ✅ |
+| 14 | 深色模式目录配色跟随主题 | ✅ TOC 底 `rgb(27, 32, 39)` |
+
+**★ 锚点跳转撞上 sticky 顶栏（本轮唯一一处真问题）**
+
+第一次跑验收时「点目录跳转」失败：`{"hash":"#第二节","scrollY":787,"top":621,"maxScroll":787}`。查下来是**测试文档太短**——文档总高 1687、视口 900，最大滚动量只有 787，最后一个小节滚不到顶部，属测试用例的问题。
+
+但顺着查下去暴露了真问题：`.site-header` 是 `position: sticky; top: 0`、高 **61px**，锚点若被滚到 `top: 0` 就会**藏在顶栏底下**（首次的「成功」只是被最大滚动量凑巧掩盖了）。
+
+修法：`src/styles/global.css` 里给正文标题加 `scroll-margin-top: 4.5rem`（72px）。把测试文档撑到 2179 高后复测：`#第一节` 绝对位置 916 → `scrollY = 916 - 72 = 844`，视口内 `top = 72`，顶栏底 61 → **留出 11px**，符合预期。**教训：给带 sticky 顶栏的页面做目录，`scroll-margin-top` 是必需项，而且必须用足够长的文档去验，否则会被「已经滚到底了」的假象骗过去。**
+
+**★ 灯箱按钮一开始被挤出屏幕**
+
+初版把 `‹` / `›` 相对 `<dialog>` 定位（`left: calc(-1 * (2.6rem + 0.75rem))`），落在图外。但图片宽度已经被 `max-width: 94vw` 顶住，图几乎占满视口，按钮就被推到视口之外——**截图里根本看不到**，24 条 DOM 断言却全绿。
+
+修法：改成 `position: fixed`，直接以视口定位（左右各 `1rem`、关闭键 `top: 1rem; right: 1rem`），顺带删掉了原来那条窄屏媒体查询。**又一次印证 U3/U4 的教训：结构化断言代替不了看一眼真实渲染。**
+
+**回看脚本（`_audit/`，已 gitignore）**：`u6-verify.cjs`（24 条验收 + 截图）、`u6-anchor.cjs`（打印文档高度、标题绝对位置、`scroll-margin-top`，用来定位锚点问题）。截图落在 `C:\Users\Emila_58035\AppData\Local\Temp\`：`u6-post-top.png`、`u6-lightbox.png`、`u6-post-mobile.png`。
+
 ---
 
 ## 9. 待你拍板的小项
@@ -416,7 +466,7 @@
 2. ~~**卡片列表每行几个**~~ **已定（m01675）：每行一列。**
 3. **归档页/标签页是否也卡片化**：默认**不**改（保持现在的紧凑列表），只有首页卡片化。
 4. **圆钮的动画强度**：**已按用户批注定为唱片纹理**。收起态是一张迷你唱片——同心细沟 + 偏心的斜向高光 + 中心标签面，图标落在标签上；播放时匀速旋（6s/圈），暂停时停在当前角度。详见上文 U5 阶段的「★ 唱片纹理」小节。
-5. **阅读时长的显示位置**：默认放在文章头部 meta 行（与日期、标签同一行），归档页不加。
+5. **阅读时长的显示位置**：**已按默认实施** —— 放在文章头部 meta 行（与日期、标签同一行），归档页不加。算法是中文 350 字/分 + 西文 200 词/分，代码块不计入（见 `src/utils/reading.ts`）。
 6. ~~**是否要封面图的默认渐变样式**~~ **已定（m01710）：B2** —— 无 `cover` 的文章**不渲染封面区**，卡片更紧凑、文字密度更高；接受同一列里卡片高低不齐。第 5.2 节的 B1/B3 作废。
 
 ---

@@ -1,7 +1,10 @@
 ---
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import ImageLightbox from '../../components/ImageLightbox.astro';
+import TableOfContents from '../../components/TableOfContents.astro';
 import { formatDate } from '../../utils/date';
+import { readingMinutes } from '../../utils/reading';
 import { href } from '../../utils/url';
 
 export async function getStaticPaths() {
@@ -10,11 +13,12 @@ export async function getStaticPaths() {
 }
 
 const { post } = Astro.props;
-const { Content } = await render(post);
+const { Content, headings } = await render(post);
 const updated =
   post.data.updatedDate && post.data.updatedDate.valueOf() !== post.data.pubDate.valueOf()
     ? post.data.updatedDate
     : null;
+const minutes = readingMinutes(post.body ?? '');
 ---
 
 <BaseLayout title={post.data.title} description={post.data.description}>
@@ -24,6 +28,7 @@ const updated =
       <div class="post-meta">
         <time datetime={post.data.pubDate.toISOString()}>{formatDate(post.data.pubDate)}</time>
         {updated && <span>修订于 {formatDate(updated)}</span>}
+        <span>约 {minutes} 分钟</span>
       </div>
       {
         post.data.tags.length > 0 && (
@@ -38,6 +43,10 @@ const updated =
       }
     </header>
 
+    <TableOfContents headings={headings} />
+
     <div class="prose"><Content /></div>
   </article>
+
+  <ImageLightbox />
 </BaseLayout>

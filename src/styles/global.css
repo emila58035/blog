@@ -297,6 +297,17 @@ th {
   margin: 1.5rem 0;
 }
 
+/* 正文图片可点开看大图（灯箱在 ImageLightbox.astro） */
+.prose img {
+  border-radius: var(--radius);
+  cursor: zoom-in;
+}
+
+/* 顶栏是 sticky 的，锚点跳转得把标题从栏底下让出来 */
+.prose :is(h2, h3, h4) {
+  scroll-margin-top: 4.5rem;
+}
+
 /* ===== 无障碍 ===== */
 :focus-visible {
   outline: 2px solid var(--accent);

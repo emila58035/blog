@@ -1,0 +1,173 @@
+---
+// 正文图片灯箱。用原生 <dialog>，不引第三方库：
+// Esc 关闭、点击背景关闭、左右方向键切换。
+// 真正打开哪张图由脚本在点击时决定，这里只放一个空壳。
+---
+
+<dialog class="lightbox" data-lightbox aria-label="图片查看">
+  <img data-lightbox-img alt="" />
+  <button class="lightbox-btn lightbox-prev" type="button" data-lightbox-prev aria-label="上一张">‹</button>
+  <button class="lightbox-btn lightbox-next" type="button" data-lightbox-next aria-label="下一张">›</button>
+  <button class="lightbox-btn lightbox-close" type="button" data-lightbox-close aria-label="关闭">✕</button>
+  <p class="lightbox-count" data-lightbox-count></p>
+</dialog>
+
+<script>
+  type Parts = {
+    img: HTMLImageElement;
+    prev: HTMLButtonElement;
+    next: HTMLButtonElement;
+    close: HTMLButtonElement;
+    count: HTMLElement;
+  };
+
+  const pick = <T extends Element>(root: ParentNode, selector: string) => {
+    const el = root.querySelector(selector);
+    if (!el) throw new Error(`灯箱缺少 ${selector}`);
+    return el as T;
+  };
+
+  // 整站只注册一次点击委托；客户端导航后正文换了也不用重新绑
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLImageElement)) return;
+    // 只接管正文里的裸图；被 <a> 包住的图仍然走原本的链接
+    if (!target.closest('.prose') || target.closest('a')) return;
+
+    const dialog = document.querySelector<HTMLDialogElement>('[data-lightbox]');
+    if (!dialog) return;
+
+    const items = [...document.querySelectorAll<HTMLImageElement>('.prose img')];
+    const index = items.indexOf(target);
+    if (index < 0) return;
+
+    const parts: Parts = {
+      img: pick(dialog, '[data-lightbox-img]'),
+      prev: pick(dialog, '[data-lightbox-prev]'),
+      next: pick(dialog, '[data-lightbox-next]'),
+      close: pick(dialog, '[data-lightbox-close]'),
+      count: pick(dialog, '[data-lightbox-count]'),
+    };
+
+    const multiple = items.length > 1;
+    let current = index;
+
+    const paint = () => {
+      const source = items[current];
+      parts.img.src = source.currentSrc || source.src;
+      parts.img.alt = source.alt;
+      parts.count.textContent = multiple ? `${current + 1} / ${items.length}` : '';
+      parts.prev.hidden = !multiple;
+      parts.next.hidden = !multiple;
+    };
+
+    const step = (delta: number) => {
+      current = (current + delta + items.length) % items.length;
+      paint();
+    };
+
+    // 用 onX 赋值而不是 addEventListener，重复打开也不会堆监听
+    parts.prev.onclick = () => step(-1);
+    parts.next.onclick = () => step(1);
+    parts.close.onclick = () => dialog.close();
+    dialog.onclick = (e) => {
+      // 点在图片和按钮之外的空白处（含 ::backdrop）就关掉
+      if (e.target === dialog) dialog.close();
+    };
+    dialog.onkeydown = (e) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        step(-1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        step(1);
+      }
+    };
+
+    paint();
+    dialog.showModal();
+  });
+</script>
+
+<style>
+  .lightbox {
+    width: auto;
+    max-width: 94vw;
+    max-height: 92vh;
+    padding: 0;
+    border: none;
+    background: transparent;
+    overflow: visible;
+  }
+
+  .lightbox::backdrop {
+    background: rgb(10 12 16 / 84%);
+  }
+
+  .lightbox img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 94vw;
+    max-height: 92vh;
+    border-radius: var(--radius);
+    box-shadow: 0 16px 48px rgb(0 0 0 / 45%);
+  }
+
+  .lightbox-btn {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 50%;
+    background: rgb(20 22 26 / 62%);
+    color: #fff;
+    cursor: pointer;
+    line-height: 1;
+    transition: background var(--transition);
+  }
+
+  .lightbox-btn:hover {
+    background: rgb(20 22 26 / 88%);
+  }
+
+  /* 按钮固定在视口两侧，不跟着图走：
+     图宽已经被 94vw 顶住时，如果按钮相对对话框定位就会被挤出屏幕。 */
+  .lightbox-prev,
+  .lightbox-next {
+    position: fixed;
+    top: 50%;
+    width: 2.6rem;
+    height: 2.6rem;
+    margin-top: -1.3rem;
+    font-size: 1.6rem;
+  }
+
+  .lightbox-prev {
+    left: 1rem;
+  }
+
+  .lightbox-next {
+    right: 1rem;
+  }
+
+  .lightbox-close {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    width: 2.2rem;
+    height: 2.2rem;
+    font-size: 1rem;
+  }
+
+  .lightbox-count {
+    position: absolute;
+    left: 50%;
+    bottom: calc(-1.6rem);
+    transform: translateX(-50%);
+    margin: 0;
+    color: rgb(255 255 255 / 72%);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+  }
+</style>
